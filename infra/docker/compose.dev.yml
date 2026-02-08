@@ -44,7 +44,7 @@ services:
     env_file:
       - ./env.example
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8281}
+      VITE_API_URL: ${VITE_API_URL:-/api}
       CHOKIDAR_USEPOLLING: "true"
     working_dir: /app
     command: sh -c "if [ ! -d node_modules/vite ]; then npm install; fi && npm run dev"
