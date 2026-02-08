@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
+import { useToast } from "../components/ToastProvider";
 import { isUiBugModeEnabled } from "../lib/bugs";
 import { apiRequest, ApiError } from "../lib/http";
 
@@ -17,6 +18,7 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
   const [email, setEmail] = useState("student@qualitycat.academy");
   const [password, setPassword] = useState("student123");
   const navigate = useNavigate();
+  const toast = useToast();
 
   const loginMutation = useMutation({
     mutationFn: (payload: { email: string; password: string }) =>
@@ -26,7 +28,11 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
       }),
     onSuccess: (data) => {
       onLogin(data.token);
+      toast.success("Signed in successfully.");
       navigate("/courses", { replace: true });
+    },
+    onError: (error) => {
+      toast.error((error as ApiError).message);
     },
   });
 

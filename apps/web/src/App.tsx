@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
+import { useToast } from "./components/ToastProvider";
 import { authStorage } from "./lib/auth";
 import { isUiBugModeEnabled } from "./lib/bugs";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
@@ -13,6 +14,7 @@ import SessionsPage from "./pages/SessionsPage";
 
 const App = (): JSX.Element => {
   const [token, setToken] = useState<string | null>(() => authStorage.getToken());
+  const toast = useToast();
 
   const auth = useMemo(
     () => ({
@@ -25,9 +27,10 @@ const App = (): JSX.Element => {
       logout: () => {
         authStorage.clearToken();
         setToken(null);
+        toast.info("Logged out.");
       },
     }),
-    [token],
+    [token, toast],
   );
 
   return (

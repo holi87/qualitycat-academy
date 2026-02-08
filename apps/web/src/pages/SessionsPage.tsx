@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useToast } from "../components/ToastProvider";
 import { isUiBugModeEnabled } from "../lib/bugs";
 import { formatDateTime } from "../lib/datetime";
 import { apiRequest, ApiError } from "../lib/http";
@@ -19,6 +20,7 @@ type BookingResponse = {
 
 const SessionsPage = ({ token }: SessionsPageProps): JSX.Element => {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [courseId, setCourseId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -66,12 +68,17 @@ const SessionsPage = ({ token }: SessionsPageProps): JSX.Element => {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
       void queryClient.invalidateQueries({ queryKey: ["bookings", "mine"] });
+      toast.success("Booking created.");
+    },
+    onError: (error) => {
+      toast.error((error as ApiError).message);
     },
   });
 
   const onFilterSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     setFilters({ courseId: courseId.trim(), from, to });
+    toast.info("Filters applied.");
   };
 
   const submitBooking = (sessionId: string): void => {
