@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build API
+        working-directory: apps/api
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Web
+        working-directory: apps/web
+        run: |
+          npm ci
+          npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start Dev Stack
+        run: docker compose -f infra/docker/compose.dev.yml up -d --build
+
+      - name: Healthcheck API
+        run: curl -sSf http://localhost:8281/health
+
+      - name: Healthcheck Web
+        run: curl -I http://localhost:8280
+
+      - name: Migrate + Seed DB
+        run: |
+          docker compose -f infra/docker/compose.dev.yml exec -T api npm run db:migrate
+          docker compose -f infra/docker/compose.dev.yml exec -T api npm run db:seed
+
+      - name: Auth + Courses Smoke
+        run: |
+          token=$(curl -sS -H 'Content-Type: application/json' \
+            -d '{"email":"student@qualitycat.academy","password":"student123"}' \
+            http://localhost:8281/auth/login | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+          test -n "$token"
+          curl -sS http://localhost:8281/courses?page=1\&limit=1
+
+      - name: Stop Dev Stack
+        if: always()
+        run: docker compose -f infra/docker/compose.dev.yml down --remove-orphans
