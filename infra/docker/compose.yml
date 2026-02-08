@@ -56,7 +56,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.academy.rule=Host(`academy.qualitycat.pl`)
+      - traefik.http.routers.academy.rule=Host(`academy.qualitycat.com.pl`)
       - traefik.http.routers.academy.entrypoints=web
       - traefik.http.services.academy.loadbalancer.server.port=80
     healthcheck:
