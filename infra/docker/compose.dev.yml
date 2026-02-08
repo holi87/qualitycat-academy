@@ -13,6 +13,7 @@ services:
       retries: 10
 
   api:
+    image: academy-api
     build:
       context: ../../apps/api
       dockerfile: Dockerfile
@@ -34,6 +35,7 @@ services:
       - "8281:8081"
 
   web:
+    image: academy-web
     build:
       context: ../../apps/web
       dockerfile: Dockerfile
