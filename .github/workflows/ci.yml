@@ -39,11 +39,44 @@ jobs:
       - name: Start Dev Stack
         run: docker compose -f infra/docker/compose.dev.yml up -d --build
 
+      - name: Wait for API + Web
+        run: |
+          set -euo pipefail
+
+          api_ready=0
+          for i in $(seq 1 60); do
+            if curl -sSf http://localhost:8281/health >/dev/null; then
+              api_ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$api_ready" -ne 1 ]; then
+            echo "API did not become ready in time."
+            docker compose -f infra/docker/compose.dev.yml logs db api web
+            exit 1
+          fi
+
+          web_ready=0
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8280 || true)
+            if [ "$code" = "200" ]; then
+              web_ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$web_ready" -ne 1 ]; then
+            echo "Web did not return HTTP 200 in time."
+            docker compose -f infra/docker/compose.dev.yml logs db api web
+            exit 1
+          fi
+
       - name: Healthcheck API
         run: curl -sSf http://localhost:8281/health
 
       - name: Healthcheck Web
-        run: curl -I http://localhost:8280
+        run: curl -sSf -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:8280
 
       - name: Migrate + Seed DB
         run: |
