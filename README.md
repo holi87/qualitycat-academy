@@ -1,0 +1,3 @@
+# qualitycat-academy
+
+Initial commit.
