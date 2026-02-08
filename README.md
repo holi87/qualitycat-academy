@@ -13,11 +13,11 @@
    ```
 4. Sprawdź działanie:
    ```bash
-   curl -sSf http://localhost:18081/health
-   curl -I http://localhost:18080
+   curl -sSf http://localhost:8281/health
+   curl -I http://localhost:8280
    ```
 
 Porty:
-- web: `18080`
-- api: `18081`
-- db: `15432`
+- web: `8280`
+- api: `8281`
+- db: `5532`
