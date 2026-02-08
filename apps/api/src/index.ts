@@ -1,5 +1,7 @@
 import "dotenv/config";
 import fastifyJwt from "@fastify/jwt";
+import fastifySwagger from "@fastify/swagger";
+import fastifySwaggerUi from "@fastify/swagger-ui";
 import { BookingStatus, PrismaClient, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
@@ -14,18 +16,6 @@ type JwtUser = {
   userId: string;
   email: string;
   role: Role;
-};
-
-type ApiDocsEndpoint = {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  path: string;
-  auth: "public" | "bearer";
-  roles?: Role[];
-  description: string;
-  query?: string[];
-  body?: Record<string, unknown>;
-  notes?: string[];
-  curl: string;
 };
 
 type ApiError = {
@@ -104,223 +94,16 @@ const port = Number(process.env.PORT ?? "8081");
 const jwtSecret = process.env.JWT_SECRET;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
 
-const apiDocsEndpoints: ApiDocsEndpoint[] = [
-  {
-    method: "GET",
-    path: "/health",
-    auth: "public",
-    description: "Service health check.",
-    curl: 'curl -sSf "$BASE_URL/health"',
-  },
-  {
-    method: "GET",
-    path: "/api-docs",
-    auth: "public",
-    description: "Human-readable API docs page.",
-    curl: 'curl -sS "$BASE_URL/api-docs"',
-  },
-  {
-    method: "GET",
-    path: "/api-docs.json",
-    auth: "public",
-    description: "Machine-readable API docs listing.",
-    curl: 'curl -sS "$BASE_URL/api-docs.json"',
-  },
-  {
-    method: "POST",
-    path: "/auth/login",
-    auth: "public",
-    description: "Login and obtain JWT token.",
-    body: {
-      email: "student@qualitycat.academy",
-      password: "student123",
-    },
-    curl:
-      "curl -sS -H 'Content-Type: application/json' " +
-      "-d '{\"email\":\"student@qualitycat.academy\",\"password\":\"student123\"}' " +
-      '"$BASE_URL/auth/login"',
-  },
-  {
-    method: "GET",
-    path: "/me",
-    auth: "bearer",
-    roles: ["admin", "mentor", "student"],
-    description: "Get current authenticated user profile.",
-    curl: 'curl -sS -H "Authorization: Bearer $TOKEN" "$BASE_URL/me"',
-  },
-  {
-    method: "GET",
-    path: "/courses",
-    auth: "public",
-    description: "List courses with pagination and sorting.",
-    query: ["page", "limit", "sortBy", "sortOrder"],
-    curl: 'curl -sS "$BASE_URL/courses?page=1&limit=10&sortBy=title&sortOrder=asc"',
-  },
-  {
-    method: "GET",
-    path: "/courses/:id",
-    auth: "public",
-    description: "Get single course with sessions.",
-    curl: 'curl -sS "$BASE_URL/courses/<COURSE_ID>"',
-  },
-  {
-    method: "POST",
-    path: "/courses",
-    auth: "bearer",
-    roles: ["admin", "mentor"],
-    description: "Create a new course.",
-    body: {
-      title: "New Course",
-      description: "Optional description",
-    },
-    curl:
-      "curl -sS -X POST -H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json' " +
-      "-d '{\"title\":\"New Course\",\"description\":\"Optional description\"}' " +
-      '"$BASE_URL/courses"',
-  },
-  {
-    method: "GET",
-    path: "/sessions",
-    auth: "public",
-    description: "List sessions with filters and pagination.",
-    query: ["page", "limit", "sortBy", "sortOrder", "courseId", "from", "to"],
-    curl: 'curl -sS "$BASE_URL/sessions?page=1&limit=10&sortBy=startsAt&sortOrder=asc"',
-  },
-  {
-    method: "POST",
-    path: "/sessions",
-    auth: "bearer",
-    roles: ["admin", "mentor"],
-    description: "Create a new session.",
-    body: {
-      courseId: "<COURSE_ID>",
-      mentorId: "<MENTOR_ID>",
-      startsAt: "2026-12-01T10:00:00.000Z",
-      endsAt: "2026-12-01T12:00:00.000Z",
-      capacity: 20,
-    },
-    notes: ["mentorId is required for admin and forced to current user for mentor role."],
-    curl:
-      "curl -sS -X POST -H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json' " +
-      "-d '{\"courseId\":\"<COURSE_ID>\",\"mentorId\":\"<MENTOR_ID>\",\"startsAt\":\"2026-12-01T10:00:00.000Z\",\"endsAt\":\"2026-12-01T12:00:00.000Z\",\"capacity\":20}' " +
-      '"$BASE_URL/sessions"',
-  },
-  {
-    method: "POST",
-    path: "/bookings",
-    auth: "bearer",
-    roles: ["student"],
-    description: "Create (or reactivate) booking for a session.",
-    body: {
-      sessionId: "<SESSION_ID>",
-    },
-    curl:
-      "curl -sS -X POST -H 'Authorization: Bearer $TOKEN' -H 'Content-Type: application/json' " +
-      "-d '{\"sessionId\":\"<SESSION_ID>\"}' " +
-      '"$BASE_URL/bookings"',
-  },
-  {
-    method: "GET",
-    path: "/bookings/mine",
-    auth: "bearer",
-    roles: ["student"],
-    description: "List current student bookings.",
-    curl: 'curl -sS -H "Authorization: Bearer $TOKEN" "$BASE_URL/bookings/mine"',
-  },
-  {
-    method: "GET",
-    path: "/internal/bugs",
-    auth: "bearer",
-    roles: ["admin", "mentor"],
-    description: "Read backend bug flags and mode.",
-    curl: 'curl -sS -H "Authorization: Bearer $TOKEN" "$BASE_URL/internal/bugs"',
-  },
-  {
-    method: "GET",
-    path: "/__debug/flags",
-    auth: "public",
-    description: "Read backend debug flags when BUGS=on.",
-    notes: ["Route exists only when BUGS=on."],
-    curl: 'curl -sS "$BASE_URL/__debug/flags"',
-  },
-];
-
-const escapeHtml = (value: string): string => {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+const isAcademyDomainHost = (hostHeader: string | undefined): boolean => {
+  return (hostHeader ?? "").includes("academy.qualitycat.com.pl");
 };
 
-const renderApiDocsHtml = (): string => {
-  const rows = apiDocsEndpoints
-    .map((endpoint) => {
-      const roles = endpoint.roles ? endpoint.roles.join(", ") : "-";
-      const query = endpoint.query ? endpoint.query.join(", ") : "-";
-      const body = endpoint.body ? escapeHtml(JSON.stringify(endpoint.body, null, 2)) : "-";
-      const notes =
-        endpoint.notes && endpoint.notes.length > 0
-          ? endpoint.notes.map((note) => `<li>${escapeHtml(note)}</li>`).join("")
-          : "<li>-</li>";
+const resolveOpenApiServers = (hostHeader: string | undefined): Array<{ url: string; description: string }> => {
+  if (isAcademyDomainHost(hostHeader)) {
+    return [{ url: "/api", description: "Via Traefik path prefix (/api)" }];
+  }
 
-      return `
-        <article class="endpoint-card">
-          <h2><span class="method">${escapeHtml(endpoint.method)}</span> <span class="path">${escapeHtml(endpoint.path)}</span></h2>
-          <p>${escapeHtml(endpoint.description)}</p>
-          <p><strong>Auth:</strong> ${escapeHtml(endpoint.auth)}</p>
-          <p><strong>Roles:</strong> ${escapeHtml(roles)}</p>
-          <p><strong>Query params:</strong> ${escapeHtml(query)}</p>
-          <p><strong>Body example:</strong></p>
-          <pre>${body}</pre>
-          <p><strong>Notes:</strong></p>
-          <ul>${notes}</ul>
-          <p><strong>Curl:</strong></p>
-          <pre>${escapeHtml(endpoint.curl)}</pre>
-        </article>
-      `;
-    })
-    .join("\n");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QualityCat Academy API Docs</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #f5f7fb; color: #172136; }
-    main { width: min(1040px, 94vw); margin: 0 auto; padding: 24px 0 36px; }
-    .hero { background: #fff; border: 1px solid #d7dfec; border-radius: 12px; padding: 18px; margin-bottom: 14px; }
-    .hero h1 { margin: 0 0 10px; font-size: 24px; }
-    .hero p { margin: 6px 0; color: #445777; }
-    .endpoint-grid { display: grid; gap: 12px; }
-    .endpoint-card { background: #fff; border: 1px solid #d7dfec; border-radius: 12px; padding: 14px; }
-    .endpoint-card h2 { margin: 0 0 8px; font-size: 17px; }
-    .method { display: inline-block; background: #0a66ff; color: #fff; border-radius: 999px; padding: 2px 9px; font-size: 12px; }
-    .path { font-family: "Courier New", monospace; margin-left: 6px; }
-    .endpoint-card p { margin: 7px 0; }
-    pre { background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 10px; overflow: auto; white-space: pre-wrap; }
-    ul { margin: 6px 0 0 18px; padding: 0; }
-  </style>
-</head>
-<body>
-  <main>
-    <section class="hero">
-      <h1>QualityCat Academy API Docs</h1>
-      <p><strong>Base URL (dev direct):</strong> <code>http://localhost:8281</code></p>
-      <p><strong>Base URL (prod via Traefik):</strong> <code>http://academy.qualitycat.com.pl/api</code></p>
-      <p><strong>JWT:</strong> send <code>Authorization: Bearer &lt;TOKEN&gt;</code></p>
-      <p><strong>Error format:</strong> <code>{ "error": { "code": "...", "message": "...", "details": ... } }</code></p>
-      <p>Set shell helper before testing: <code>export BASE_URL=http://localhost:8281</code></p>
-    </section>
-    <section class="endpoint-grid">
-      ${rows}
-    </section>
-  </main>
-</body>
-</html>`;
+  return [{ url: "/", description: "Direct API host" }];
 };
 
 const getAuthFailureStatus = (): number => (isBugEnabled("BUG_AUTH_WRONG_STATUS") ? 403 : 401);
@@ -337,6 +120,55 @@ if (!jwtSecret) {
 }
 
 void app.register(fastifyJwt, { secret: jwtSecret });
+void app.register(fastifySwagger, {
+  mode: "dynamic",
+  openapi: {
+    openapi: "3.0.3",
+    info: {
+      title: "QualityCat Academy API",
+      description: "Backend API for training and mentoring workflows.",
+      version: "0.1.0",
+    },
+    tags: [
+      { name: "system", description: "Health and diagnostics" },
+      { name: "auth", description: "Authentication and identity" },
+      { name: "courses", description: "Courses management" },
+      { name: "sessions", description: "Sessions management" },
+      { name: "bookings", description: "Bookings management" },
+      { name: "bugs", description: "Bug mode internal endpoints" },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Use token from POST /auth/login",
+        },
+      },
+    },
+    servers: [
+      { url: "/", description: "Direct API host (for localhost:8281)" },
+      { url: "/api", description: "Traefik prefixed path (academy.qualitycat.com.pl)" },
+    ],
+  },
+});
+void app.register(fastifySwaggerUi, {
+  routePrefix: "/api-docs",
+  staticCSP: true,
+  uiConfig: {
+    docExpansion: "list",
+    deepLinking: true,
+    persistAuthorization: true,
+  },
+  transformSpecification: (swaggerObject, request) => {
+    return {
+      ...swaggerObject,
+      servers: resolveOpenApiServers(request.headers.host),
+    };
+  },
+  transformSpecificationClone: true,
+});
 
 app.setNotFoundHandler((_, reply) => {
   return sendError(reply, 404, "NOT_FOUND", "Route not found");
@@ -367,47 +199,58 @@ app.decorate("authenticate", async (request, reply): Promise<void> => {
   }
 });
 
-app.get("/health", async () => {
-  return { status: "ok" };
-});
+const registerRoutes = (): void => {
+app.get(
+  "/health",
+  {
+    schema: {
+      tags: ["system"],
+      summary: "Health check",
+      description: "Simple liveness probe endpoint.",
+    },
+  },
+  async () => {
+    return { status: "ok" };
+  },
+);
 
-app.get("/api-docs.json", async () => {
+app.get("/api-docs.json", { schema: { hide: true } }, async (request) => {
   return {
-    service: "qualitycat-academy-api",
-    generatedAt: new Date().toISOString(),
-    baseUrls: {
-      devDirect: "http://localhost:8281",
-      prodViaTraefik: "http://academy.qualitycat.com.pl/api",
-    },
-    auth: {
-      type: "Bearer JWT",
-      header: "Authorization: Bearer <TOKEN>",
-    },
-    errorFormat: {
-      error: {
-        code: "string",
-        message: "string",
-        details: "optional",
-      },
-    },
-    endpoints: apiDocsEndpoints,
+    ...app.swagger(),
+    servers: resolveOpenApiServers(request.headers.host),
   };
 });
 
-app.get("/api-docs", async (_, reply) => {
-  return reply.type("text/html; charset=utf-8").send(renderApiDocsHtml());
+app.get("/api-docs/openapi.json", { schema: { hide: true } }, async (request) => {
+  return {
+    ...app.swagger(),
+    servers: resolveOpenApiServers(request.headers.host),
+  };
 });
 
 if (isBugEnabled()) {
-  app.get("/__debug/flags", async () => {
-    return getBugFlagsSnapshot();
-  });
+  app.get(
+    "/__debug/flags",
+    {
+      schema: {
+        tags: ["bugs"],
+        summary: "Read debug flags",
+        description: "Available only when BUGS=on.",
+      },
+    },
+    async () => {
+      return getBugFlagsSnapshot();
+    },
+  );
 }
 
 app.post<{ Body: { email: string; password: string } }>(
   "/auth/login",
   {
     schema: {
+      tags: ["auth"],
+      summary: "Login",
+      description: "Authenticate user with email/password and return JWT.",
       body: {
         type: "object",
         required: ["email", "password"],
@@ -452,6 +295,11 @@ app.get(
   "/me",
   {
     preHandler: [app.authenticate],
+    schema: {
+      tags: ["auth"],
+      summary: "Current user",
+      security: [{ bearerAuth: [] }],
+    },
   },
   async (request, reply) => {
     const user = await prisma.user.findUnique({
@@ -479,6 +327,12 @@ app.get(
   "/internal/bugs",
   {
     preHandler: [app.authenticate],
+    schema: {
+      tags: ["bugs"],
+      summary: "Bug flags snapshot",
+      description: "Accessible for admin and mentor.",
+      security: [{ bearerAuth: [] }],
+    },
   },
   async (request, reply) => {
     if (!isAdminOrMentor(request.user.role)) {
@@ -495,6 +349,8 @@ app.get<{ Querystring: { page: number; limit: number; sortBy: CourseSortBy; sort
   "/courses",
   {
     schema: {
+      tags: ["courses"],
+      summary: "List courses",
       querystring: {
         type: "object",
         additionalProperties: false,
@@ -558,6 +414,8 @@ app.get<{ Params: { id: string } }>(
   "/courses/:id",
   {
     schema: {
+      tags: ["courses"],
+      summary: "Get course details",
       params: {
         type: "object",
         additionalProperties: false,
@@ -600,6 +458,9 @@ app.post<{ Body: { title: string; description?: string } }>(
   {
     preHandler: [app.authenticate],
     schema: {
+      tags: ["courses"],
+      summary: "Create course",
+      security: [{ bearerAuth: [] }],
       body: {
         type: "object",
         required: ["title"],
@@ -648,6 +509,8 @@ app.get<{
   "/sessions",
   {
     schema: {
+      tags: ["sessions"],
+      summary: "List sessions",
       querystring: {
         type: "object",
         additionalProperties: false,
@@ -760,6 +623,9 @@ app.post<{
   {
     preHandler: [app.authenticate],
     schema: {
+      tags: ["sessions"],
+      summary: "Create session",
+      security: [{ bearerAuth: [] }],
       body: {
         type: "object",
         required: ["courseId", "startsAt", "endsAt", "capacity"],
@@ -847,6 +713,9 @@ app.post<{ Body: { sessionId: string } }>(
   {
     preHandler: [app.authenticate],
     schema: {
+      tags: ["bookings"],
+      summary: "Create booking",
+      security: [{ bearerAuth: [] }],
       body: {
         type: "object",
         required: ["sessionId"],
@@ -996,6 +865,11 @@ app.get(
   "/bookings/mine",
   {
     preHandler: [app.authenticate],
+    schema: {
+      tags: ["bookings"],
+      summary: "Current student bookings",
+      security: [{ bearerAuth: [] }],
+    },
   },
   async (request, reply) => {
     if (!isStudent(request.user.role)) {
@@ -1038,6 +912,16 @@ app.get(
     return { data: items };
   },
 );
+};
+
+app.after((error) => {
+  if (error) {
+    app.log.error(error);
+    process.exit(1);
+  }
+
+  registerRoutes();
+});
 
 app.addHook("onClose", async (): Promise<void> => {
   await prisma.$disconnect();

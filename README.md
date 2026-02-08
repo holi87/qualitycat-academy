@@ -32,8 +32,8 @@ docker compose -f infra/docker/compose.yml up -d --build
 Compose project name: `academy-prod`
 
 ## API Docs
-- HTML: `http://localhost:8281/api-docs`
-- JSON: `http://localhost:8281/api-docs.json`
+- Swagger UI (Try it out): `http://localhost:8281/api-docs`
+- OpenAPI JSON: `http://localhost:8281/api-docs.json`
 - przez Traefik (prod-like): `http://academy.qualitycat.com.pl/api/api-docs`
 
 ## Konta testowe (seed)
