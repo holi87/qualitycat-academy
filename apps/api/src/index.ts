@@ -3,6 +3,7 @@ import fastifyJwt from "@fastify/jwt";
 import { BookingStatus, PrismaClient, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import { getBugFlagsSnapshot, isBugEnabled } from "./lib/bugs";
 
 type Role = "admin" | "mentor" | "student";
 type CourseSortBy = "createdAt" | "title";
@@ -129,6 +130,12 @@ app.decorate("authenticate", async (request, reply): Promise<void> => {
 app.get("/health", async () => {
   return { status: "ok" };
 });
+
+if (isBugEnabled()) {
+  app.get("/__debug/flags", async () => {
+    return getBugFlagsSnapshot();
+  });
+}
 
 app.post<{ Body: { email: string; password: string } }>(
   "/auth/login",
