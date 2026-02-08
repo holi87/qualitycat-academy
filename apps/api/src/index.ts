@@ -6,6 +6,7 @@ import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 
 type Role = "admin" | "mentor" | "student";
 type CourseSortBy = "createdAt" | "title";
+type SessionSortBy = "createdAt" | "startsAt";
 type SortOrder = "asc" | "desc";
 
 type JwtUser = {
@@ -29,6 +30,11 @@ const roleMap: Record<UserRole, Role> = {
 };
 
 const toRole = (role: UserRole): Role => roleMap[role];
+const isAdminOrMentor = (role: Role): boolean => role === "admin" || role === "mentor";
+const parseDateInput = (value: string): Date | null => {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 const sendError = (
   reply: FastifyReply,
@@ -311,6 +317,214 @@ app.post<{ Body: { title: string; description?: string } }>(
     });
 
     return reply.code(201).send({ data: course });
+  },
+);
+
+app.get<{
+  Querystring: {
+    page: number;
+    limit: number;
+    sortBy: SessionSortBy;
+    sortOrder: SortOrder;
+    courseId?: string;
+    from?: string;
+    to?: string;
+  };
+}>(
+  "/sessions",
+  {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          page: { type: "integer", minimum: 1, default: 1 },
+          limit: { type: "integer", minimum: 1, maximum: 100, default: 10 },
+          sortBy: { type: "string", enum: ["createdAt", "startsAt"], default: "startsAt" },
+          sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+          courseId: { type: "string", minLength: 1 },
+          from: { type: "string", format: "date-time" },
+          to: { type: "string", format: "date-time" },
+        },
+      },
+    },
+  },
+  async (request, reply) => {
+    const { page, limit, sortBy, sortOrder, courseId, from, to } = request.query;
+    const fromDate = from ? parseDateInput(from) : null;
+    const toDate = to ? parseDateInput(to) : null;
+
+    if (from && !fromDate) {
+      return sendError(reply, 400, "INVALID_DATE", "Invalid 'from' date");
+    }
+
+    if (to && !toDate) {
+      return sendError(reply, 400, "INVALID_DATE", "Invalid 'to' date");
+    }
+
+    if (fromDate && toDate && fromDate > toDate) {
+      return sendError(reply, 400, "INVALID_DATE_RANGE", "'from' must be before or equal to 'to'");
+    }
+
+    const where: Prisma.SessionWhereInput = {};
+    if (courseId) {
+      where.courseId = courseId;
+    }
+
+    if (fromDate || toDate) {
+      where.startsAt = {
+        ...(fromDate ? { gte: fromDate } : {}),
+        ...(toDate ? { lte: toDate } : {}),
+      };
+    }
+
+    const skip = (page - 1) * limit;
+    const orderBy: Prisma.SessionOrderByWithRelationInput =
+      sortBy === "createdAt" ? { createdAt: sortOrder } : { startsAt: sortOrder };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.session.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        select: {
+          id: true,
+          courseId: true,
+          mentorId: true,
+          startsAt: true,
+          endsAt: true,
+          capacity: true,
+          createdAt: true,
+          updatedAt: true,
+          course: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          mentor: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      }),
+      prisma.session.count({ where }),
+    ]);
+
+    return {
+      data: items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+        sortBy,
+        sortOrder,
+        filters: {
+          courseId: courseId ?? null,
+          from: from ?? null,
+          to: to ?? null,
+        },
+      },
+    };
+  },
+);
+
+app.post<{
+  Body: {
+    courseId: string;
+    mentorId?: string;
+    startsAt: string;
+    endsAt: string;
+    capacity: number;
+  };
+}>(
+  "/sessions",
+  {
+    preHandler: [app.authenticate],
+    schema: {
+      body: {
+        type: "object",
+        required: ["courseId", "startsAt", "endsAt", "capacity"],
+        additionalProperties: false,
+        properties: {
+          courseId: { type: "string", minLength: 1 },
+          mentorId: { type: "string", minLength: 1 },
+          startsAt: { type: "string", format: "date-time" },
+          endsAt: { type: "string", format: "date-time" },
+          capacity: { type: "integer", minimum: 1, maximum: 500 },
+        },
+      },
+    },
+  },
+  async (request, reply) => {
+    if (!isAdminOrMentor(request.user.role)) {
+      return sendError(reply, 403, "FORBIDDEN", "Insufficient role");
+    }
+
+    const startsAt = parseDateInput(request.body.startsAt);
+    const endsAt = parseDateInput(request.body.endsAt);
+    if (!startsAt || !endsAt) {
+      return sendError(reply, 400, "INVALID_DATE", "Invalid session dates");
+    }
+
+    if (startsAt >= endsAt) {
+      return sendError(reply, 400, "INVALID_DATE_RANGE", "'startsAt' must be before 'endsAt'");
+    }
+
+    let mentorId = request.body.mentorId;
+    if (request.user.role === "mentor") {
+      if (mentorId && mentorId !== request.user.userId) {
+        return sendError(reply, 403, "FORBIDDEN", "Mentor can create only own sessions");
+      }
+      mentorId = request.user.userId;
+    } else if (!mentorId) {
+      return sendError(reply, 400, "VALIDATION_ERROR", "mentorId is required for admin");
+    }
+
+    const [course, mentor] = await prisma.$transaction([
+      prisma.course.findUnique({
+        where: { id: request.body.courseId },
+        select: { id: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: mentorId },
+        select: { id: true, role: true },
+      }),
+    ]);
+
+    if (!course) {
+      return sendError(reply, 404, "COURSE_NOT_FOUND", "Course not found");
+    }
+
+    if (!mentor || mentor.role !== UserRole.MENTOR) {
+      return sendError(reply, 400, "INVALID_MENTOR", "mentorId must reference a mentor user");
+    }
+
+    const session = await prisma.session.create({
+      data: {
+        courseId: request.body.courseId,
+        mentorId: mentor.id,
+        startsAt,
+        endsAt,
+        capacity: request.body.capacity,
+      },
+      select: {
+        id: true,
+        courseId: true,
+        mentorId: true,
+        startsAt: true,
+        endsAt: true,
+        capacity: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return reply.code(201).send({ data: session });
   },
 );
 
