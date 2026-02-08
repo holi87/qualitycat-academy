@@ -27,6 +27,11 @@ Porty dev:
 docker compose -f infra/docker/compose.yml up -d --build
 ```
 
+## API Docs
+- HTML: `http://localhost:8281/api-docs`
+- JSON: `http://localhost:8281/api-docs.json`
+- przez Traefik (prod-like): `http://academy.qualitycat.com.pl/api/api-docs`
+
 ## BUG MODE
 - backend: `BUGS=on|off` + `BUG_FLAGS=...`
 - frontend: `VITE_BUGS=on|off`
