@@ -5,7 +5,9 @@ import fastifySwaggerUi from "@fastify/swagger-ui";
 import { BookingStatus, PrismaClient, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
+import { resetAcademyToBaseline } from "./lib/baseline";
 import { getBugFlagsSnapshot, isBugEnabled } from "./lib/bugs";
+import { SchedulerHandle, startResetScheduler } from "./lib/reset-scheduler";
 
 type Role = "admin" | "mentor" | "student";
 type CourseSortBy = "createdAt" | "title";
@@ -93,6 +95,11 @@ const host = process.env.HOST ?? "0.0.0.0";
 const port = Number(process.env.PORT ?? "8081");
 const jwtSecret = process.env.JWT_SECRET;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
+const dbResetScheduleEnabled = (process.env.DB_RESET_SCHEDULE_ENABLED ?? "off").trim().toLowerCase() === "on";
+const dbResetScheduleCron = process.env.DB_RESET_SCHEDULE_CRON ?? "0 22 * * 0";
+const dbResetScheduleTimezone = process.env.DB_RESET_SCHEDULE_TZ ?? "Europe/Warsaw";
+const dbResetConfirmationValue = "RESET";
+let resetSchedulerHandle: SchedulerHandle | null = null;
 
 const isAcademyDomainHost = (hostHeader: string | undefined): boolean => {
   return (hostHeader ?? "").includes("academy.qualitycat.com.pl");
@@ -135,6 +142,7 @@ void app.register(fastifySwagger, {
       { name: "courses", description: "Courses management" },
       { name: "sessions", description: "Sessions management" },
       { name: "bookings", description: "Bookings management" },
+      { name: "admin", description: "Administrative operations" },
       { name: "bugs", description: "Bug mode internal endpoints" },
     ],
     components: {
@@ -341,6 +349,62 @@ app.get(
 
     return {
       data: getBugFlagsSnapshot(),
+    };
+  },
+);
+
+app.post<{ Body: { confirmation: string } }>(
+  "/admin/reset-database",
+  {
+    preHandler: [app.authenticate],
+    schema: {
+      tags: ["admin"],
+      summary: "Reset database to baseline",
+      description:
+        "Admin-only operation. Confirmation value must equal 'RESET'. Existing users/sessions/bookings are replaced with baseline seed data.",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        required: ["confirmation"],
+        additionalProperties: false,
+        properties: {
+          confirmation: { type: "string", minLength: 1 },
+        },
+      },
+    },
+  },
+  async (request, reply) => {
+    if (request.user.role !== "admin") {
+      return sendError(reply, 403, "FORBIDDEN", "Only admin can reset database");
+    }
+
+    if (request.body.confirmation.trim().toUpperCase() !== dbResetConfirmationValue) {
+      return sendError(
+        reply,
+        400,
+        "INVALID_CONFIRMATION",
+        `Confirmation must be '${dbResetConfirmationValue}'`,
+      );
+    }
+
+    const summary = await resetAcademyToBaseline(prisma);
+    request.log.warn(
+      {
+        action: "database.reset",
+        triggeredBy: {
+          userId: request.user.userId,
+          email: request.user.email,
+        },
+        summary,
+      },
+      "Database reset executed by admin endpoint.",
+    );
+
+    return {
+      data: {
+        status: "ok",
+        summary,
+      },
     };
   },
 );
@@ -924,13 +988,31 @@ app.after((error) => {
 });
 
 app.addHook("onClose", async (): Promise<void> => {
+  if (resetSchedulerHandle) {
+    resetSchedulerHandle.stop();
+    resetSchedulerHandle = null;
+  }
+
   await prisma.$disconnect();
 });
 
 const start = async (): Promise<void> => {
   try {
+    resetSchedulerHandle = startResetScheduler({
+      enabled: dbResetScheduleEnabled,
+      cronExpression: dbResetScheduleCron,
+      timezone: dbResetScheduleTimezone,
+      prisma,
+      logger: app.log,
+    });
+
     await app.listen({ host, port });
   } catch (error) {
+    if (resetSchedulerHandle) {
+      resetSchedulerHandle.stop();
+      resetSchedulerHandle = null;
+    }
+
     app.log.error(error);
     process.exit(1);
   }

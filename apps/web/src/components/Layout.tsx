@@ -1,11 +1,13 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { UserRole } from "../lib/types";
 
 type LayoutProps = {
   isAuthenticated: boolean;
+  role: UserRole | null;
   onLogout: () => void;
 };
 
-const Layout = ({ isAuthenticated, onLogout }: LayoutProps): JSX.Element => {
+const Layout = ({ isAuthenticated, role, onLogout }: LayoutProps): JSX.Element => {
   const resolveNavClass = ({ isActive }: { isActive: boolean }): string =>
     `nav-link${isActive ? " nav-link--active" : ""}`;
 
@@ -28,6 +30,11 @@ const Layout = ({ isAuthenticated, onLogout }: LayoutProps): JSX.Element => {
             <NavLink to="/my-bookings" className={resolveNavClass}>
               My bookings
             </NavLink>
+            {role === "admin" ? (
+              <NavLink to="/admin" className={resolveNavClass}>
+                Admin
+              </NavLink>
+            ) : null}
             {!isAuthenticated ? (
               <NavLink to="/login" className={resolveNavClass}>
                 Login

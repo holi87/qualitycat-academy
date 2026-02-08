@@ -4,18 +4,16 @@ WORKDIR /app
 FROM base AS deps
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json ./
+COPY tsconfig.json ./
 COPY prisma ./prisma
+COPY src ./src
 RUN npm ci
 
 FROM deps AS dev
-COPY tsconfig.json ./
-COPY src ./src
 EXPOSE 8081
 CMD ["npm", "run", "dev"]
 
 FROM deps AS build
-COPY tsconfig.json ./
-COPY src ./src
 RUN npm run build
 
 FROM deps AS prod-deps

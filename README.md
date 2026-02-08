@@ -34,6 +34,7 @@ Compose project name: `academy-prod`
 `academy-prod` uruchamia automatycznie:
 - migracje DB (`api-migrate`)
 - bootstrap seed przy pustej bazie (`api-bootstrap`)
+- cotygodniowy reset danych do baseline (`niedziela 22:00`, konfigurowalny ENV)
 
 ## API Docs
 - Swagger UI (Try it out): `http://localhost:8281/api-docs`
@@ -44,6 +45,12 @@ Compose project name: `academy-prod`
 - admin: `admin@qualitycat.academy` / `admin123`
 - mentor: `mentor@qualitycat.academy` / `mentor123`
 - student: `student@qualitycat.academy` / `student123`
+
+## Admin Reset DB
+- endpoint: `POST /admin/reset-database` (tylko `admin`)
+- body: `{ "confirmation": "RESET" }`
+- UI: `/admin` (widoczne tylko dla zalogowanego admina)
+- po resecie wymagane jest ponowne logowanie
 
 ## BUG MODE
 - backend: `BUGS=on|off` + `BUG_FLAGS=...`

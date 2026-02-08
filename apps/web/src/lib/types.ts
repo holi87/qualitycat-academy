@@ -1,5 +1,11 @@
 export type UserRole = "admin" | "mentor" | "student";
 
+export type MeResponse = {
+  id: string;
+  email: string;
+  role: UserRole;
+};
+
 export type Course = {
   id: string;
   title: string;
@@ -97,5 +103,18 @@ export type InternalBugsResponse = {
   data: {
     bugs: "on" | "off";
     flags: Record<string, boolean>;
+  };
+};
+
+export type AdminResetResponse = {
+  data: {
+    status: "ok";
+    summary: {
+      users: number;
+      courses: number;
+      sessions: number;
+      bookings: number;
+      ranAt: string;
+    };
   };
 };

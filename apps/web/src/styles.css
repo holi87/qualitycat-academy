@@ -181,6 +181,22 @@ p {
   margin: 1.1rem 0 0.8rem;
 }
 
+.danger-zone {
+  margin-top: 0.6rem;
+  border-radius: 14px;
+  border: 1px solid rgba(190, 30, 62, 0.35);
+  background: linear-gradient(180deg, rgba(255, 246, 248, 0.95), rgba(255, 238, 242, 0.92));
+  padding: 1rem;
+}
+
+.danger-zone h2 {
+  margin: 0 0 0.55rem;
+}
+
+.danger-zone p {
+  margin-bottom: 0.8rem;
+}
+
 .panel > p,
 .card > p {
   color: var(--muted);
@@ -247,6 +263,15 @@ p {
 .card button:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 34px rgba(10, 86, 221, 0.3);
+}
+
+.danger-button {
+  background: linear-gradient(120deg, #d72d48, #8d0f2f) !important;
+  box-shadow: 0 14px 30px rgba(141, 15, 47, 0.24) !important;
+}
+
+.danger-button:hover {
+  box-shadow: 0 14px 34px rgba(141, 15, 47, 0.32) !important;
 }
 
 .form button[disabled],

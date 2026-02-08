@@ -25,6 +25,7 @@ services:
       - ./env.example
     environment:
       PORT: "8081"
+      DB_RESET_SCHEDULE_ENABLED: "off"
     working_dir: /app
     command: sh -c "if [ ! -d node_modules/fastify ] || [ ! -d node_modules/prisma ] || [ ! -d node_modules/@prisma/client ] || [ ! -d node_modules/@fastify/jwt ] || [ ! -d node_modules/bcrypt ]; then npm install; fi && npm run dev"
     volumes:
