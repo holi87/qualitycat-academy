@@ -1,6 +1,6 @@
 import "dotenv/config";
 import fastifyJwt from "@fastify/jwt";
-import { PrismaClient, Prisma, UserRole } from "@prisma/client";
+import { BookingStatus, PrismaClient, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 
@@ -31,10 +31,24 @@ const roleMap: Record<UserRole, Role> = {
 
 const toRole = (role: UserRole): Role => roleMap[role];
 const isAdminOrMentor = (role: Role): boolean => role === "admin" || role === "mentor";
+const isStudent = (role: Role): boolean => role === "student";
 const parseDateInput = (value: string): Date | null => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+class DomainError extends Error {
+  public readonly statusCode: number;
+  public readonly code: string;
+  public readonly details?: unknown;
+
+  constructor(statusCode: number, code: string, message: string, details?: unknown) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+}
 
 const sendError = (
   reply: FastifyReply,
@@ -525,6 +539,185 @@ app.post<{
     });
 
     return reply.code(201).send({ data: session });
+  },
+);
+
+app.post<{ Body: { sessionId: string } }>(
+  "/bookings",
+  {
+    preHandler: [app.authenticate],
+    schema: {
+      body: {
+        type: "object",
+        required: ["sessionId"],
+        additionalProperties: false,
+        properties: {
+          sessionId: { type: "string", minLength: 1 },
+        },
+      },
+    },
+  },
+  async (request, reply) => {
+    if (!isStudent(request.user.role)) {
+      return sendError(reply, 403, "FORBIDDEN", "Only student can create bookings");
+    }
+
+    try {
+      const result = await prisma.$transaction(
+        async (tx) => {
+          const session = await tx.session.findUnique({
+            where: { id: request.body.sessionId },
+            select: {
+              id: true,
+              capacity: true,
+            },
+          });
+
+          if (!session) {
+            throw new DomainError(404, "SESSION_NOT_FOUND", "Session not found");
+          }
+
+          const existing = await tx.booking.findUnique({
+            where: {
+              sessionId_userId: {
+                sessionId: session.id,
+                userId: request.user.userId,
+              },
+            },
+            select: {
+              id: true,
+              status: true,
+            },
+          });
+
+          if (existing?.status === BookingStatus.CONFIRMED) {
+            throw new DomainError(409, "ALREADY_BOOKED", "Session already booked");
+          }
+
+          const confirmedCount = await tx.booking.count({
+            where: {
+              sessionId: session.id,
+              status: BookingStatus.CONFIRMED,
+            },
+          });
+
+          if (confirmedCount >= session.capacity) {
+            throw new DomainError(409, "SESSION_FULL", "Session has reached capacity");
+          }
+
+          const booking =
+            existing?.status === BookingStatus.CANCELLED
+              ? await tx.booking.update({
+                  where: { id: existing.id },
+                  data: { status: BookingStatus.CONFIRMED },
+                  select: {
+                    id: true,
+                    status: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    session: {
+                      select: {
+                        id: true,
+                        startsAt: true,
+                        endsAt: true,
+                        capacity: true,
+                        course: {
+                          select: {
+                            id: true,
+                            title: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                })
+              : await tx.booking.create({
+                  data: {
+                    sessionId: session.id,
+                    userId: request.user.userId,
+                    status: BookingStatus.CONFIRMED,
+                  },
+                  select: {
+                    id: true,
+                    status: true,
+                    createdAt: true,
+                    updatedAt: true,
+                    session: {
+                      select: {
+                        id: true,
+                        startsAt: true,
+                        endsAt: true,
+                        capacity: true,
+                        course: {
+                          select: {
+                            id: true,
+                            title: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                });
+
+          return {
+            booking,
+            wasReactivated: existing?.status === BookingStatus.CANCELLED,
+          };
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+
+      return reply.code(result.wasReactivated ? 200 : 201).send({ data: result.booking });
+    } catch (error) {
+      if (error instanceof DomainError) {
+        return sendError(reply, error.statusCode, error.code, error.message, error.details);
+      }
+
+      throw error;
+    }
+  },
+);
+
+app.get(
+  "/bookings/mine",
+  {
+    preHandler: [app.authenticate],
+  },
+  async (request, reply) => {
+    if (!isStudent(request.user.role)) {
+      return sendError(reply, 403, "FORBIDDEN", "Only student can access own bookings");
+    }
+
+    const items = await prisma.booking.findMany({
+      where: {
+        userId: request.user.userId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        session: {
+          select: {
+            id: true,
+            startsAt: true,
+            endsAt: true,
+            capacity: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return { data: items };
   },
 );
 
