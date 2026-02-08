@@ -1,0 +1,35 @@
+:root {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #111827;
+  background: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 2rem;
+}
+
+h1 {
+  margin: 0;
+  text-transform: capitalize;
+}
+
+code {
+  background: #e2e8f0;
+  border-radius: 6px;
+  padding: 0.15rem 0.35rem;
+}

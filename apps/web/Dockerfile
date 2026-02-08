@@ -1,7 +1,22 @@
-FROM python:3.12-alpine
-
+FROM node:22-alpine AS base
 WORKDIR /app
-COPY index.html /app/index.html
 
+FROM base AS deps
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM deps AS dev
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts index.html ./
+COPY src ./src
 EXPOSE 8080
-CMD ["python", "-m", "http.server", "8080", "--bind", "0.0.0.0"]
+CMD ["npm", "run", "dev"]
+
+FROM deps AS build
+COPY tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts index.html ./
+COPY src ./src
+RUN npm run build
+
+FROM nginx:1.27-alpine AS runtime
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
