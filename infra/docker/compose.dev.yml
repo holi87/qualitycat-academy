@@ -16,11 +16,17 @@ services:
     build:
       context: ../../apps/api
       dockerfile: Dockerfile
+      target: dev
     restart: unless-stopped
     env_file:
       - ./env.example
     environment:
       PORT: "8081"
+    working_dir: /app
+    command: sh -c "if [ ! -d node_modules/fastify ]; then npm install; fi && npm run dev"
+    volumes:
+      - ../../apps/api:/app
+      - api_node_modules:/app/node_modules
     depends_on:
       db:
         condition: service_healthy
@@ -36,3 +42,6 @@ services:
       - api
     ports:
       - "8280:8080"
+
+volumes:
+  api_node_modules:

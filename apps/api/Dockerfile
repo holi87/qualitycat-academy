@@ -1,7 +1,29 @@
-FROM python:3.12-alpine
-
+FROM node:22-alpine AS base
 WORKDIR /app
-COPY server.py /app/server.py
 
+FROM base AS deps
+COPY package.json ./
+RUN npm install
+
+FROM deps AS dev
+COPY tsconfig.json ./
+COPY src ./src
 EXPOSE 8081
-CMD ["python", "/app/server.py"]
+CMD ["npm", "run", "dev"]
+
+FROM deps AS build
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+FROM base AS prod-deps
+COPY package.json ./
+RUN npm install --omit=dev
+
+FROM base AS runtime
+ENV NODE_ENV=production
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+EXPOSE 8081
+CMD ["npm", "run", "start"]
