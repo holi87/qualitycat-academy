@@ -23,7 +23,7 @@ services:
     environment:
       PORT: "8081"
     working_dir: /app
-    command: sh -c "if [ ! -d node_modules/fastify ]; then npm install; fi && npm run dev"
+    command: sh -c "if [ ! -d node_modules/fastify ] || [ ! -d node_modules/prisma ] || [ ! -d node_modules/@prisma/client ]; then npm install; fi && npm run dev"
     volumes:
       - ../../apps/api:/app
       - api_node_modules:/app/node_modules
