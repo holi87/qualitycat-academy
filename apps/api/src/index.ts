@@ -92,6 +92,15 @@ const port = Number(process.env.PORT ?? "8081");
 const jwtSecret = process.env.JWT_SECRET;
 const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
 
+const getAuthFailureStatus = (): number => (isBugEnabled("BUG_AUTH_WRONG_STATUS") ? 403 : 401);
+const getPaginationSkip = (page: number, limit: number): number => {
+  if (isBugEnabled("BUG_PAGINATION_MIXED_BASE")) {
+    return page * limit;
+  }
+
+  return (page - 1) * limit;
+};
+
 if (!jwtSecret) {
   throw new Error("JWT_SECRET must be set");
 }
@@ -123,7 +132,7 @@ app.decorate("authenticate", async (request, reply): Promise<void> => {
   try {
     await request.jwtVerify<JwtUser>();
   } catch {
-    sendError(reply, 401, "UNAUTHORIZED", "Authentication required");
+    return sendError(reply, getAuthFailureStatus(), "UNAUTHORIZED", "Authentication required");
   }
 });
 
@@ -160,12 +169,12 @@ app.post<{ Body: { email: string; password: string } }>(
     });
 
     if (!user) {
-      return sendError(reply, 401, "INVALID_CREDENTIALS", "Invalid email or password");
+      return sendError(reply, getAuthFailureStatus(), "INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      return sendError(reply, 401, "INVALID_CREDENTIALS", "Invalid email or password");
+      return sendError(reply, getAuthFailureStatus(), "INVALID_CREDENTIALS", "Invalid email or password");
     }
 
     const token = await reply.jwtSign(
@@ -197,7 +206,7 @@ app.get(
     });
 
     if (!user) {
-      return sendError(reply, 401, "UNAUTHORIZED", "Authentication required");
+      return sendError(reply, getAuthFailureStatus(), "UNAUTHORIZED", "Authentication required");
     }
 
     return {
@@ -226,7 +235,7 @@ app.get<{ Querystring: { page: number; limit: number; sortBy: CourseSortBy; sort
   },
   async (request) => {
     const { page, limit, sortBy, sortOrder } = request.query;
-    const skip = (page - 1) * limit;
+    const skip = getPaginationSkip(page, limit);
 
     const orderBy: Prisma.CourseOrderByWithRelationInput =
       sortBy === "title" ? { title: sortOrder } : { createdAt: sortOrder };
@@ -246,6 +255,16 @@ app.get<{ Querystring: { page: number; limit: number; sortBy: CourseSortBy; sort
       }),
       prisma.course.count(),
     ]);
+
+    if (isBugEnabled("BUG_NPLUS1_COURSES")) {
+      await Promise.all(
+        items.map(async (course) => {
+          await prisma.session.count({
+            where: { courseId: course.id },
+          });
+        }),
+      );
+    }
 
     return {
       data: items,
@@ -399,7 +418,7 @@ app.get<{
       };
     }
 
-    const skip = (page - 1) * limit;
+    const skip = getPaginationSkip(page, limit);
     const orderBy: Prisma.SessionOrderByWithRelationInput =
       sortBy === "createdAt" ? { createdAt: sortOrder } : { startsAt: sortOrder };
 
@@ -570,109 +589,123 @@ app.post<{ Body: { sessionId: string } }>(
     }
 
     try {
-      const result = await prisma.$transaction(
-        async (tx) => {
-          const session = await tx.session.findUnique({
-            where: { id: request.body.sessionId },
-            select: {
-              id: true,
-              capacity: true,
-            },
-          });
-
-          if (!session) {
-            throw new DomainError(404, "SESSION_NOT_FOUND", "Session not found");
-          }
-
-          const existing = await tx.booking.findUnique({
-            where: {
-              sessionId_userId: {
-                sessionId: session.id,
-                userId: request.user.userId,
+      const selectShape = {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        session: {
+          select: {
+            id: true,
+            startsAt: true,
+            endsAt: true,
+            capacity: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
               },
             },
-            select: {
-              id: true,
-              status: true,
-            },
-          });
-
-          if (existing?.status === BookingStatus.CONFIRMED) {
-            throw new DomainError(409, "ALREADY_BOOKED", "Session already booked");
-          }
-
-          const confirmedCount = await tx.booking.count({
-            where: {
-              sessionId: session.id,
-              status: BookingStatus.CONFIRMED,
-            },
-          });
-
-          if (confirmedCount >= session.capacity) {
-            throw new DomainError(409, "SESSION_FULL", "Session has reached capacity");
-          }
-
-          const booking =
-            existing?.status === BookingStatus.CANCELLED
-              ? await tx.booking.update({
-                  where: { id: existing.id },
-                  data: { status: BookingStatus.CONFIRMED },
-                  select: {
-                    id: true,
-                    status: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    session: {
-                      select: {
-                        id: true,
-                        startsAt: true,
-                        endsAt: true,
-                        capacity: true,
-                        course: {
-                          select: {
-                            id: true,
-                            title: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                })
-              : await tx.booking.create({
-                  data: {
-                    sessionId: session.id,
-                    userId: request.user.userId,
-                    status: BookingStatus.CONFIRMED,
-                  },
-                  select: {
-                    id: true,
-                    status: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    session: {
-                      select: {
-                        id: true,
-                        startsAt: true,
-                        endsAt: true,
-                        capacity: true,
-                        course: {
-                          select: {
-                            id: true,
-                            title: true,
-                          },
-                        },
-                      },
-                    },
-                  },
-                });
-
-          return {
-            booking,
-            wasReactivated: existing?.status === BookingStatus.CANCELLED,
-          };
+          },
         },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
+      } as const;
+
+      const runBookingFlow = async (
+        db: Prisma.TransactionClient | PrismaClient,
+        withArtificialDelay: boolean,
+      ): Promise<{
+        booking: {
+          id: string;
+          status: BookingStatus;
+          createdAt: Date;
+          updatedAt: Date;
+          session: {
+            id: string;
+            startsAt: Date;
+            endsAt: Date;
+            capacity: number;
+            course: {
+              id: string;
+              title: string;
+            };
+          };
+        };
+        wasReactivated: boolean;
+      }> => {
+        const session = await db.session.findUnique({
+          where: { id: request.body.sessionId },
+          select: {
+            id: true,
+            capacity: true,
+          },
+        });
+
+        if (!session) {
+          throw new DomainError(404, "SESSION_NOT_FOUND", "Session not found");
+        }
+
+        const existing = await db.booking.findUnique({
+          where: {
+            sessionId_userId: {
+              sessionId: session.id,
+              userId: request.user.userId,
+            },
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        });
+
+        if (existing?.status === BookingStatus.CONFIRMED) {
+          throw new DomainError(409, "ALREADY_BOOKED", "Session already booked");
+        }
+
+        const confirmedCount = await db.booking.count({
+          where: {
+            sessionId: session.id,
+            status: BookingStatus.CONFIRMED,
+          },
+        });
+
+        if (confirmedCount >= session.capacity) {
+          throw new DomainError(409, "SESSION_FULL", "Session has reached capacity");
+        }
+
+        if (withArtificialDelay) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 120);
+          });
+        }
+
+        const booking =
+          existing?.status === BookingStatus.CANCELLED
+            ? await db.booking.update({
+                where: { id: existing.id },
+                data: { status: BookingStatus.CONFIRMED },
+                select: selectShape,
+              })
+            : await db.booking.create({
+                data: {
+                  sessionId: session.id,
+                  userId: request.user.userId,
+                  status: BookingStatus.CONFIRMED,
+                },
+                select: selectShape,
+              });
+
+        return {
+          booking,
+          wasReactivated: existing?.status === BookingStatus.CANCELLED,
+        };
+      };
+
+      const result = isBugEnabled("BUG_BOOKINGS_RACE")
+        ? await runBookingFlow(prisma, true)
+        : await prisma.$transaction(
+            async (tx) => runBookingFlow(tx, false),
+            { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+          );
 
       return reply.code(result.wasReactivated ? 200 : 201).send({ data: result.booking });
     } catch (error) {
@@ -695,10 +728,14 @@ app.get(
       return sendError(reply, 403, "FORBIDDEN", "Only student can access own bookings");
     }
 
+    const where = isBugEnabled("BUG_BOOKINGS_LEAK")
+      ? undefined
+      : {
+          userId: request.user.userId,
+        };
+
     const items = await prisma.booking.findMany({
-      where: {
-        userId: request.user.userId,
-      },
+      where,
       orderBy: {
         createdAt: "desc",
       },
