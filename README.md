@@ -22,6 +22,11 @@ Porty dev:
 - api: `8281`
 - db: `5532`
 
+## Quickstart (Prod-like)
+```bash
+docker compose -f infra/docker/compose.yml up -d --build
+```
+
 ## BUG MODE
 - backend: `BUGS=on|off` + `BUG_FLAGS=...`
 - frontend: `VITE_BUGS=on|off`
