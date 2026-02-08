@@ -217,6 +217,22 @@ app.get(
   },
 );
 
+app.get(
+  "/internal/bugs",
+  {
+    preHandler: [app.authenticate],
+  },
+  async (request, reply) => {
+    if (!isAdminOrMentor(request.user.role)) {
+      return sendError(reply, 403, "FORBIDDEN", "Mentor or admin role required");
+    }
+
+    return {
+      data: getBugFlagsSnapshot(),
+    };
+  },
+);
+
 app.get<{ Querystring: { page: number; limit: number; sortBy: CourseSortBy; sortOrder: SortOrder } }>(
   "/courses",
   {

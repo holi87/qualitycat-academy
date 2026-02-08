@@ -3,8 +3,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import Layout from "./components/Layout";
 import { authStorage } from "./lib/auth";
+import { isUiBugModeEnabled } from "./lib/bugs";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import CoursesPage from "./pages/CoursesPage";
+import BugsPage from "./pages/BugsPage";
 import LoginPage from "./pages/LoginPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
 import SessionsPage from "./pages/SessionsPage";
@@ -40,6 +42,7 @@ const App = (): JSX.Element => {
         <Route path="courses/:id" element={<CourseDetailsPage token={auth.token} />} />
         <Route path="sessions" element={<SessionsPage token={auth.token} />} />
         <Route path="my-bookings" element={<MyBookingsPage token={auth.token} />} />
+        {isUiBugModeEnabled() ? <Route path="bugs" element={<BugsPage token={auth.token} />} /> : null}
       </Route>
       <Route path="*" element={<Navigate to="/courses" replace />} />
     </Routes>

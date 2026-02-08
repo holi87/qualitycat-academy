@@ -92,3 +92,10 @@ export type BookingItem = {
 export type MyBookingsResponse = {
   data: BookingItem[];
 };
+
+export type InternalBugsResponse = {
+  data: {
+    bugs: "on" | "off";
+    flags: Record<string, boolean>;
+  };
+};
