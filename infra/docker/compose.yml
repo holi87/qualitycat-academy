@@ -4,6 +4,8 @@ services:
     restart: unless-stopped
     env_file:
       - ./env.example
+    volumes:
+      - academy_db_data:/var/lib/postgresql/data
     ports:
       - "5532:5432"
     healthcheck:
@@ -11,6 +13,20 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  api-migrate:
+    image: academy-api:migrate
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+      target: deps
+    restart: "no"
+    env_file:
+      - ./env.example
+    command: sh -c "npm run db:migrate"
+    depends_on:
+      db:
+        condition: service_healthy
 
   api:
     image: academy-api:prod
@@ -27,8 +43,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
+    networks:
+      - default
+      - proxy
     ports:
       - "8281:8081"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.academy-api.rule=Host(`academy.qualitycat.com.pl`) && PathPrefix(`/api`)
+      - traefik.http.routers.academy-api.entrypoints=web
+      - traefik.http.routers.academy-api.priority=100
+      - traefik.http.routers.academy-api.middlewares=academy-api-strip
+      - traefik.http.middlewares.academy-api-strip.stripprefix.prefixes=/api
+      - traefik.http.services.academy-api.loadbalancer.server.port=8081
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8081/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -42,7 +72,7 @@ services:
       dockerfile: Dockerfile
       target: runtime
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8281}
+        VITE_API_URL: ${VITE_API_URL:-/api}
         VITE_BUGS: ${VITE_BUGS:-off}
     restart: unless-stopped
     depends_on:
@@ -58,6 +88,7 @@ services:
       - traefik.docker.network=proxy
       - traefik.http.routers.academy.rule=Host(`academy.qualitycat.com.pl`)
       - traefik.http.routers.academy.entrypoints=web
+      - traefik.http.routers.academy.priority=10
       - traefik.http.services.academy.loadbalancer.server.port=80
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1 >/dev/null 2>&1 || exit 1"]
@@ -68,3 +99,6 @@ services:
 networks:
   proxy:
     external: true
+
+volumes:
+  academy_db_data:
