@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
+import { formatDateTime } from "../lib/datetime";
 import { apiRequest } from "../lib/http";
 import { CourseDetailsResponse } from "../lib/types";
 
@@ -44,7 +45,7 @@ const CourseDetailsPage = ({ token }: CourseDetailsPageProps): JSX.Element => {
             {courseQuery.data.data.sessions.map((session) => (
               <li key={session.id}>
                 <span>
-                  {new Date(session.startsAt).toLocaleString()} - {new Date(session.endsAt).toLocaleString()}
+                  {formatDateTime(session.startsAt)} - {formatDateTime(session.endsAt)}
                 </span>
                 <span>Capacity: {session.capacity}</span>
               </li>

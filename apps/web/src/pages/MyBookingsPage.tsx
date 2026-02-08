@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
+import { formatDateTime } from "../lib/datetime";
 import { apiRequest } from "../lib/http";
 import { MyBookingsResponse } from "../lib/types";
 
@@ -41,9 +42,7 @@ const MyBookingsPage = ({ token }: MyBookingsPageProps): JSX.Element => {
           <article className="card" key={booking.id}>
             <h2>{booking.session.course.title}</h2>
             <p>
-              {new Date(booking.session.startsAt).toLocaleString()} -
-              {" "}
-              {new Date(booking.session.endsAt).toLocaleString()}
+              {formatDateTime(booking.session.startsAt)} - {formatDateTime(booking.session.endsAt)}
             </p>
             <p>Status: {booking.status}</p>
             <p>Booking ID: {booking.id}</p>

@@ -1,6 +1,8 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { isUiBugModeEnabled } from "../lib/bugs";
+import { formatDateTime } from "../lib/datetime";
 import { apiRequest, ApiError } from "../lib/http";
 import { SessionsResponse } from "../lib/types";
 
@@ -72,6 +74,13 @@ const SessionsPage = ({ token }: SessionsPageProps): JSX.Element => {
     setFilters({ courseId: courseId.trim(), from, to });
   };
 
+  const submitBooking = (sessionId: string): void => {
+    bookingMutation.mutate(sessionId);
+    if (isUiBugModeEnabled()) {
+      bookingMutation.mutate(sessionId);
+    }
+  };
+
   return (
     <section className="panel">
       <h1>Sessions</h1>
@@ -104,14 +113,14 @@ const SessionsPage = ({ token }: SessionsPageProps): JSX.Element => {
           <article className="card" key={session.id}>
             <h2>{session.course.title}</h2>
             <p>
-              {new Date(session.startsAt).toLocaleString()} - {new Date(session.endsAt).toLocaleString()}
+              {formatDateTime(session.startsAt)} - {formatDateTime(session.endsAt)}
             </p>
             <p>Mentor: {session.mentor.email}</p>
             <p>Capacity: {session.capacity}</p>
             <button
               type="button"
               disabled={!token || bookingMutation.isPending}
-              onClick={() => bookingMutation.mutate(session.id)}
+              onClick={() => submitBooking(session.id)}
             >
               Reserve
             </button>

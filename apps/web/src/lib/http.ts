@@ -10,6 +10,8 @@ export class ApiError extends Error {
   }
 }
 
+import { isUiBugModeEnabled } from "./bugs";
+
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   token?: string | null;
@@ -47,7 +49,10 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
         }
       | undefined;
 
-    const message = errorPayload?.error?.message ?? `Request failed with status ${response.status}`;
+    const message =
+      response.status === 500 && isUiBugModeEnabled()
+        ? "Invalid email or password"
+        : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
     const code = errorPayload?.error?.code;
     throw new ApiError(message, response.status, code);
   }

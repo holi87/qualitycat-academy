@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
+import { isUiBugModeEnabled } from "../lib/bugs";
 import { apiRequest, ApiError } from "../lib/http";
 
 type LoginPageProps = {
@@ -31,7 +32,12 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    loginMutation.mutate({ email, password });
+    const payload = { email, password };
+    loginMutation.mutate(payload);
+
+    if (isUiBugModeEnabled()) {
+      loginMutation.mutate(payload);
+    }
   };
 
   return (
