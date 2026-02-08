@@ -22,15 +22,24 @@ Porty dev:
 - api: `8281`
 - db: `5532`
 
+Compose project name: `academy-dev`
+
 ## Quickstart (Prod-like)
 ```bash
 docker compose -f infra/docker/compose.yml up -d --build
 ```
 
+Compose project name: `academy-prod`
+
 ## API Docs
 - HTML: `http://localhost:8281/api-docs`
 - JSON: `http://localhost:8281/api-docs.json`
 - przez Traefik (prod-like): `http://academy.qualitycat.com.pl/api/api-docs`
+
+## Konta testowe (seed)
+- admin: `admin@qualitycat.academy` / `admin123`
+- mentor: `mentor@qualitycat.academy` / `mentor123`
+- student: `student@qualitycat.academy` / `student123`
 
 ## BUG MODE
 - backend: `BUGS=on|off` + `BUG_FLAGS=...`

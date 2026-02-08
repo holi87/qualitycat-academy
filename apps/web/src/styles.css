@@ -147,6 +147,15 @@ p {
   box-shadow: 0 14px 30px rgba(10, 86, 221, 0.3);
 }
 
+.nav-link--external {
+  border-style: dashed;
+}
+
+.nav-link--external::after {
+  content: " \2197";
+  font-size: 0.8em;
+}
+
 .layout__main {
   width: min(1120px, 94vw);
   margin: 0 auto;

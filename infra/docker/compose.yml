@@ -1,3 +1,5 @@
+name: academy-prod
+
 services:
   db:
     image: postgres:16-alpine
@@ -53,12 +55,12 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.academy-api.rule=Host(`academy.qualitycat.com.pl`) && PathPrefix(`/api`)
-      - traefik.http.routers.academy-api.entrypoints=web
-      - traefik.http.routers.academy-api.priority=100
-      - traefik.http.routers.academy-api.middlewares=academy-api-strip
-      - traefik.http.middlewares.academy-api-strip.stripprefix.prefixes=/api
-      - traefik.http.services.academy-api.loadbalancer.server.port=8081
+      - traefik.http.routers.qca-api.rule=Host(`academy.qualitycat.com.pl`) && PathPrefix(`/api`)
+      - traefik.http.routers.qca-api.entrypoints=web
+      - traefik.http.routers.qca-api.priority=100
+      - traefik.http.routers.qca-api.middlewares=qca-api-strip
+      - traefik.http.middlewares.qca-api-strip.stripprefix.prefixes=/api
+      - traefik.http.services.qca-api.loadbalancer.server.port=8081
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8081/health >/dev/null 2>&1 || exit 1"]
       interval: 10s
@@ -86,10 +88,10 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=proxy
-      - traefik.http.routers.academy.rule=Host(`academy.qualitycat.com.pl`)
-      - traefik.http.routers.academy.entrypoints=web
-      - traefik.http.routers.academy.priority=10
-      - traefik.http.services.academy.loadbalancer.server.port=80
+      - traefik.http.routers.qca-web.rule=Host(`academy.qualitycat.com.pl`)
+      - traefik.http.routers.qca-web.entrypoints=web
+      - traefik.http.routers.qca-web.priority=10
+      - traefik.http.services.qca-web.loadbalancer.server.port=80
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1 >/dev/null 2>&1 || exit 1"]
       interval: 10s
