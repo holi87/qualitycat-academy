@@ -30,6 +30,22 @@ services:
       db:
         condition: service_healthy
 
+  api-bootstrap:
+    image: academy-api:bootstrap
+    build:
+      context: ../../apps/api
+      dockerfile: Dockerfile
+      target: deps
+    restart: "no"
+    env_file:
+      - ./env.example
+    command: sh -c "npm run db:bootstrap"
+    depends_on:
+      db:
+        condition: service_healthy
+      api-migrate:
+        condition: service_completed_successfully
+
   api:
     image: academy-api:prod
     build:
@@ -46,6 +62,8 @@ services:
       db:
         condition: service_healthy
       api-migrate:
+        condition: service_completed_successfully
+      api-bootstrap:
         condition: service_completed_successfully
     networks:
       - default

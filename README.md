@@ -31,6 +31,10 @@ docker compose -f infra/docker/compose.yml up -d --build
 
 Compose project name: `academy-prod`
 
+`academy-prod` uruchamia automatycznie:
+- migracje DB (`api-migrate`)
+- bootstrap seed przy pustej bazie (`api-bootstrap`)
+
 ## API Docs
 - Swagger UI (Try it out): `http://localhost:8281/api-docs`
 - OpenAPI JSON: `http://localhost:8281/api-docs.json`
