@@ -14,6 +14,8 @@ const Layout = ({ isAuthenticated, onLogout }: LayoutProps): JSX.Element => {
         </Link>
         <nav className="layout__nav">
           <NavLink to="/courses">Courses</NavLink>
+          <NavLink to="/sessions">Sessions</NavLink>
+          <NavLink to="/my-bookings">My bookings</NavLink>
           <NavLink to="/login">Login</NavLink>
           {isAuthenticated ? (
             <button type="button" onClick={onLogout}>
