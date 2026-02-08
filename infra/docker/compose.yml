@@ -77,6 +77,9 @@ services:
       - traefik.http.routers.qca-api.entrypoints=web
       - traefik.http.routers.qca-api.priority=100
       - traefik.http.routers.qca-api.middlewares=qca-api-strip
+      - traefik.http.routers.qca-api-docs.rule=Host(`academy.qualitycat.com.pl`) && PathPrefix(`/api-docs`)
+      - traefik.http.routers.qca-api-docs.entrypoints=web
+      - traefik.http.routers.qca-api-docs.priority=110
       - traefik.http.middlewares.qca-api-strip.stripprefix.prefixes=/api
       - traefik.http.services.qca-api.loadbalancer.server.port=8081
     healthcheck:
