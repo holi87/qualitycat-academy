@@ -1,11 +1,10 @@
-import { createHash } from "node:crypto";
-
+import bcrypt from "bcrypt";
 import { PrismaClient, BookingStatus, UserRole } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const hashPassword = (value: string): string => {
-  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+const hashPassword = async (value: string): Promise<string> => {
+  return bcrypt.hash(value, 10);
 };
 
 async function main(): Promise<void> {
@@ -17,7 +16,7 @@ async function main(): Promise<void> {
   const admin = await prisma.user.create({
     data: {
       email: "admin@qualitycat.academy",
-      passwordHash: hashPassword("admin123"),
+      passwordHash: await hashPassword("admin123"),
       role: UserRole.ADMIN,
     },
   });
@@ -25,7 +24,7 @@ async function main(): Promise<void> {
   const mentor = await prisma.user.create({
     data: {
       email: "mentor@qualitycat.academy",
-      passwordHash: hashPassword("mentor123"),
+      passwordHash: await hashPassword("mentor123"),
       role: UserRole.MENTOR,
     },
   });
@@ -33,7 +32,7 @@ async function main(): Promise<void> {
   const student = await prisma.user.create({
     data: {
       email: "student@qualitycat.academy",
-      passwordHash: hashPassword("student123"),
+      passwordHash: await hashPassword("student123"),
       role: UserRole.STUDENT,
     },
   });

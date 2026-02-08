@@ -2,8 +2,9 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json ./
-RUN npm install
+RUN apk add --no-cache python3 make g++
+COPY package.json package-lock.json ./
+RUN npm ci
 
 FROM deps AS dev
 COPY tsconfig.json ./
@@ -17,8 +18,9 @@ COPY src ./src
 RUN npm run build
 
 FROM base AS prod-deps
-COPY package.json ./
-RUN npm install --omit=dev
+RUN apk add --no-cache python3 make g++
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 
 FROM base AS runtime
 ENV NODE_ENV=production
