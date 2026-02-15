@@ -4,10 +4,11 @@ import { UserRole } from "../lib/types";
 type LayoutProps = {
   isAuthenticated: boolean;
   role: UserRole | null;
+  showBugsLink: boolean;
   onLogout: () => void;
 };
 
-const Layout = ({ isAuthenticated, role, onLogout }: LayoutProps): JSX.Element => {
+const Layout = ({ isAuthenticated, role, showBugsLink, onLogout }: LayoutProps): JSX.Element => {
   const resolveNavClass = ({ isActive }: { isActive: boolean }): string =>
     `nav-link${isActive ? " nav-link--active" : ""}`;
 
@@ -33,6 +34,11 @@ const Layout = ({ isAuthenticated, role, onLogout }: LayoutProps): JSX.Element =
             {role === "admin" ? (
               <NavLink to="/admin" className={resolveNavClass}>
                 Admin
+              </NavLink>
+            ) : null}
+            {showBugsLink ? (
+              <NavLink to="/bugs" className={resolveNavClass}>
+                Bugs
               </NavLink>
             ) : null}
             {!isAuthenticated ? (

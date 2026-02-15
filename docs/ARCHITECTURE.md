@@ -40,7 +40,11 @@ Autoryzacja:
 ## BUG MODE
 - backend: `BUGS`, `BUG_FLAGS`
 - frontend: `VITE_BUGS`
-- ukryty widok `/bugs` dostępny tylko przy `VITE_BUGS=on`
+- widok `/bugs` dostępny dla zalogowanego `mentor`/`admin`
+- runtime API:
+  - `GET /bugs/public-state`
+  - `GET /internal/bugs`
+  - `PUT /admin/bugs/state` (admin)
 
 ## Przepływ ruchu (dev)
 1. Przeglądarka -> `web` (`http://localhost:8280`)

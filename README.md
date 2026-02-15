@@ -55,7 +55,12 @@ Compose project name: `academy-prod`
 ## BUG MODE
 - backend: `BUGS=on|off` + `BUG_FLAGS=...`
 - frontend: `VITE_BUGS=on|off`
-- ukryta strona: `/bugs` (tylko gdy `VITE_BUGS=on`)
+- strona `/bugs` (dostępna dla zalogowanego `mentor`/`admin`)
+
+Runtime (bez restartu):
+- odczyt publiczny: `GET /bugs/public-state`
+- odczyt pełny (mentor/admin): `GET /internal/bugs`
+- przełączanie (admin): `PUT /admin/bugs/state`
 
 Szczegóły: `docs/BUGS.md`
 

@@ -35,7 +35,8 @@ const BugsPage = ({ token }: BugsPageProps): JSX.Element => {
 
       {bugsQuery.data ? (
         <>
-          <p>Mode: {bugsQuery.data.data.bugs}</p>
+          <p>Backend mode: {bugsQuery.data.data.backendBugs ? "ON" : "OFF"}</p>
+          <p>Frontend mode: {bugsQuery.data.data.frontendBugs ? "ON" : "OFF"}</p>
           <pre className="debug-json">{JSON.stringify(bugsQuery.data.data.flags, null, 2)}</pre>
         </>
       ) : null}

@@ -13,7 +13,7 @@ Kroki:
 Ćwiczenia:
 1. odtwórz błąd `SESSION_FULL`
 2. odtwórz błąd `ALREADY_BOOKED`
-3. sprawdź różnicę zachowania przy `VITE_BUGS=on`
+3. sprawdź różnicę zachowania po runtime toggle `frontendBugs=true`
 
 ## 2) Ścieżka Mentor
 Cel: obsługa części operacyjnej i jakościowej.
@@ -33,7 +33,7 @@ Kroki:
 Cel: pełny monitoring i prowadzenie sesji szkoleniowych.
 
 Kroki:
-1. włączanie/wyłączanie bug mode (`BUGS`, `BUG_FLAGS`, `VITE_BUGS`)
+1. włączanie/wyłączanie bug mode (panel admina lub `PUT /admin/bugs/state`)
 2. walidacja endpointów `/internal/bugs` i `/__debug/flags`
 3. prowadzenie debug sesji dla student/mentor
 

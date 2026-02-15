@@ -6,7 +6,7 @@ import { BookingStatus, PrismaClient, Prisma, UserRole } from "@prisma/client";
 import bcrypt from "bcrypt";
 import Fastify, { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 import { resetAcademyToBaseline } from "./lib/baseline";
-import { getBugFlagsSnapshot, isBugEnabled } from "./lib/bugs";
+import { getBugFlagsSnapshot, getRuntimeBugSnapshot, isBugEnabled, setAllBackendFlags, setRuntimeBugState } from "./lib/bugs";
 import { SchedulerHandle, startResetScheduler } from "./lib/reset-scheduler";
 
 type Role = "admin" | "mentor" | "student";
@@ -236,21 +236,39 @@ app.get("/api-docs/openapi.json", { schema: { hide: true } }, async (request) =>
   };
 });
 
-if (isBugEnabled()) {
-  app.get(
-    "/__debug/flags",
-    {
-      schema: {
-        tags: ["bugs"],
-        summary: "Read debug flags",
-        description: "Available only when BUGS=on.",
+app.get(
+  "/__debug/flags",
+  {
+    schema: {
+      tags: ["bugs"],
+      summary: "Read runtime bug flags",
+      description: "Runtime bug mode snapshot.",
+    },
+  },
+  async () => {
+    return getBugFlagsSnapshot();
+  },
+);
+
+app.get(
+  "/bugs/public-state",
+  {
+    schema: {
+      tags: ["bugs"],
+      summary: "Public runtime bug state",
+      description: "Public endpoint used by web UI to apply frontend bug mode without restart.",
+    },
+  },
+  async () => {
+    const snapshot = getRuntimeBugSnapshot();
+    return {
+      data: {
+        backendBugs: snapshot.backendBugs,
+        frontendBugs: snapshot.frontendBugs,
       },
-    },
-    async () => {
-      return getBugFlagsSnapshot();
-    },
-  );
-}
+    };
+  },
+);
 
 app.post<{ Body: { email: string; password: string } }>(
   "/auth/login",
@@ -348,7 +366,71 @@ app.get(
     }
 
     return {
-      data: getBugFlagsSnapshot(),
+      data: getRuntimeBugSnapshot(),
+    };
+  },
+);
+
+app.put<{
+  Body: {
+    backendBugs?: boolean;
+    frontendBugs?: boolean;
+    flags?: Record<string, boolean>;
+  };
+}>(
+  "/admin/bugs/state",
+  {
+    preHandler: [app.authenticate],
+    schema: {
+      tags: ["admin", "bugs"],
+      summary: "Update runtime bug state",
+      description: "Admin-only runtime toggle for backend/frontend bug mode and backend bug flags.",
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: "object",
+        additionalProperties: false,
+        minProperties: 1,
+        properties: {
+          backendBugs: { type: "boolean" },
+          frontendBugs: { type: "boolean" },
+          flags: {
+            type: "object",
+            additionalProperties: { type: "boolean" },
+          },
+        },
+      },
+    },
+  },
+  async (request, reply) => {
+    if (request.user.role !== "admin") {
+      return sendError(reply, 403, "FORBIDDEN", "Only admin can update bug flags");
+    }
+
+    if (request.body.backendBugs === true && request.body.flags === undefined) {
+      setAllBackendFlags(true);
+    }
+
+    const snapshot = setRuntimeBugState({
+      backendBugs: request.body.backendBugs,
+      frontendBugs: request.body.frontendBugs,
+      flags: request.body.flags,
+    });
+
+    request.log.warn(
+      {
+        action: "runtime.bugs.update",
+        triggeredBy: {
+          userId: request.user.userId,
+          email: request.user.email,
+        },
+        update: request.body,
+        snapshot,
+      },
+      "Runtime bug state updated by admin endpoint.",
+    );
+
+    return {
+      data: snapshot,
     };
   },
 );

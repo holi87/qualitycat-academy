@@ -99,11 +99,33 @@ export type MyBookingsResponse = {
   data: BookingItem[];
 };
 
+export type RuntimeBugsData = {
+  bugs: "on" | "off";
+  backendBugs: boolean;
+  frontendBugs: boolean;
+  flags: Record<string, boolean>;
+  availableFlags: string[];
+};
+
 export type InternalBugsResponse = {
+  data: RuntimeBugsData;
+};
+
+export type PublicBugsStateResponse = {
   data: {
-    bugs: "on" | "off";
-    flags: Record<string, boolean>;
+    backendBugs: boolean;
+    frontendBugs: boolean;
   };
+};
+
+export type UpdateRuntimeBugsRequest = {
+  backendBugs?: boolean;
+  frontendBugs?: boolean;
+  flags?: Record<string, boolean>;
+};
+
+export type UpdateRuntimeBugsResponse = {
+  data: RuntimeBugsData;
 };
 
 export type AdminResetResponse = {

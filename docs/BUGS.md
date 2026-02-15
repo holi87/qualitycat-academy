@@ -31,7 +31,8 @@ Endpointy debug:
 
 ## Frontend
 Włączenie:
-- `VITE_BUGS=on`
+- runtime: `PUT /admin/bugs/state` z `{"frontendBugs": true}`
+- opcjonalny stan startowy: `VITE_BUGS=on` lub `FRONTEND_BUGS=on`
 
 Bugi UI:
 - double submit:
@@ -49,3 +50,30 @@ docker compose -f infra/docker/compose.dev.yml up -d --build
 curl -sSf http://localhost:8281/health
 curl -I http://localhost:8280
 ```
+
+## Runtime toggle (bez restartu)
+Od tej wersji bugi można przełączać w runtime, bez restartu kontenerów.
+
+- publiczny podgląd stanu dla web UI:
+  - `GET /bugs/public-state`
+- pełny podgląd flag (mentor/admin):
+  - `GET /internal/bugs`
+- zmiana stanu (admin):
+  - `PUT /admin/bugs/state`
+  - body (przykład):
+    ```json
+    {
+      "backendBugs": true,
+      "frontendBugs": true
+    }
+    ```
+
+Wyłączenie:
+```json
+{
+  "backendBugs": false,
+  "frontendBugs": false
+}
+```
+
+Jeśli `backendBugs=true` i nie podasz pola `flags`, backend automatycznie włącza wszystkie znane bug-flagi backendowe.
