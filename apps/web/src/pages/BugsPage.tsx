@@ -9,7 +9,7 @@ type BugsPageProps = {
 
 const BugsPage = ({ token }: BugsPageProps): JSX.Element => {
   const bugsQuery = useQuery({
-    queryKey: ["internal", "bugs", token],
+    queryKey: ["internal", "bugs"],
     queryFn: ({ signal }) =>
       apiRequest<InternalBugsResponse>("/internal/bugs", {
         token,

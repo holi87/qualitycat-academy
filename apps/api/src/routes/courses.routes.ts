@@ -3,7 +3,7 @@ import { CourseLevel, Prisma, PrismaClient } from "@prisma/client";
 import { sendError } from "../lib/errors.js";
 import { isBugEnabled } from "../lib/bugs.js";
 import { getPaginationSkip, buildPaginationMeta } from "../lib/pagination.js";
-import type { CourseSortBy, SortOrder } from "../types/shared.js";
+import { isAdminOrMentor, type CourseSortBy, type SortOrder } from "../types/shared.js";
 
 type CoursesRoutesOptions = {
   prisma: PrismaClient;
@@ -279,7 +279,7 @@ const coursesRoutes: FastifyPluginAsync<CoursesRoutesOptions> = async (app: Fast
       },
     },
     async (request, reply) => {
-      if (request.user.role !== "admin" && request.user.role !== "mentor") {
+      if (!isAdminOrMentor(request.user.role)) {
         return sendError(reply, 403, "FORBIDDEN", "Insufficient role");
       }
 
@@ -352,7 +352,7 @@ const coursesRoutes: FastifyPluginAsync<CoursesRoutesOptions> = async (app: Fast
       },
     },
     async (request, reply) => {
-      if (request.user.role !== "admin" && request.user.role !== "mentor") {
+      if (!isAdminOrMentor(request.user.role)) {
         return sendError(reply, 403, "FORBIDDEN", "Insufficient role");
       }
 
@@ -436,7 +436,7 @@ const coursesRoutes: FastifyPluginAsync<CoursesRoutesOptions> = async (app: Fast
       },
     },
     async (request, reply) => {
-      if (request.user.role !== "admin" && request.user.role !== "mentor") {
+      if (!isAdminOrMentor(request.user.role)) {
         return sendError(reply, 403, "FORBIDDEN", "Insufficient role");
       }
 

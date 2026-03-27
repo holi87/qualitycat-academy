@@ -21,6 +21,31 @@ type RequestOptions = {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "/api";
 
+const throwResponseError = async (response: Response): Promise<never> => {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  const errorPayload = payload as
+    | {
+        error?: {
+          code?: string;
+          message?: string;
+        };
+      }
+    | undefined;
+
+  const message =
+    response.status === 500 && isUiBugModeEnabled()
+      ? "Invalid email or password"
+      : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
+  const code = errorPayload?.error?.code;
+  throw new ApiError(message, response.status, code);
+};
+
 export const apiRequest = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
   const response = await fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
@@ -33,28 +58,7 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
   });
 
   if (!response.ok) {
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
-
-    const errorPayload = payload as
-      | {
-          error?: {
-            code?: string;
-            message?: string;
-          };
-        }
-      | undefined;
-
-    const message =
-      response.status === 500 && isUiBugModeEnabled()
-        ? "Invalid email or password"
-        : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
-    const code = errorPayload?.error?.code;
-    throw new ApiError(message, response.status, code);
+    await throwResponseError(response);
   }
 
   return (await response.json()) as T;
@@ -73,28 +77,7 @@ export const apiUpload = async <T>(path: string, file: File, token: string | nul
   });
 
   if (!response.ok) {
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = null;
-    }
-
-    const errorPayload = payload as
-      | {
-          error?: {
-            code?: string;
-            message?: string;
-          };
-        }
-      | undefined;
-
-    const message =
-      response.status === 500 && isUiBugModeEnabled()
-        ? "Invalid email or password"
-        : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
-    const code = errorPayload?.error?.code;
-    throw new ApiError(message, response.status, code);
+    await throwResponseError(response);
   }
 
   return (await response.json()) as T;

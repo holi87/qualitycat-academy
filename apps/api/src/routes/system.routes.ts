@@ -27,19 +27,13 @@ const systemRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     },
   );
 
-  app.get("/api-docs.json", { schema: { hide: true } }, async (request) => {
-    return {
-      ...app.swagger(),
-      servers: resolveOpenApiServers(request.headers.host),
-    };
+  const openApiHandler = async (request: { headers: { host?: string } }) => ({
+    ...app.swagger(),
+    servers: resolveOpenApiServers(request.headers.host),
   });
 
-  app.get("/api-docs/openapi.json", { schema: { hide: true } }, async (request) => {
-    return {
-      ...app.swagger(),
-      servers: resolveOpenApiServers(request.headers.host),
-    };
-  });
+  app.get("/api-docs.json", { schema: { hide: true } }, openApiHandler);
+  app.get("/api-docs/openapi.json", { schema: { hide: true } }, openApiHandler);
 };
 
 export default systemRoutes;
