@@ -10,11 +10,16 @@ import { apiRequest } from "./lib/http";
 import { PublicBugsStateResponse } from "./lib/types";
 import AdminPage from "./pages/AdminPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
+import CourseFormPage from "./pages/CourseFormPage";
 import CoursesPage from "./pages/CoursesPage";
 import BugsPage from "./pages/BugsPage";
 import LoginPage from "./pages/LoginPage";
 import MyBookingsPage from "./pages/MyBookingsPage";
+import ProfilePage from "./pages/ProfilePage";
+import RegisterPage from "./pages/RegisterPage";
+import SessionFormPage from "./pages/SessionFormPage";
 import SessionsPage from "./pages/SessionsPage";
+import UsersPage from "./pages/UsersPage";
 
 const App = (): JSX.Element => {
   const queryClient = useQueryClient();
@@ -55,20 +60,22 @@ const App = (): JSX.Element => {
     setToken(null);
   }, []);
 
+  const handleAuth = useCallback((nextToken: string) => {
+    authStorage.setToken(nextToken);
+    setToken(nextToken);
+  }, []);
+
   const auth = useMemo(
     () => ({
       token,
       isAuthenticated: Boolean(token),
-      login: (nextToken: string) => {
-        authStorage.setToken(nextToken);
-        setToken(nextToken);
-      },
+      login: handleAuth,
       logout: () => {
         clearAuth();
         toast.info("Logged out.");
       },
     }),
-    [clearAuth, token, toast],
+    [clearAuth, handleAuth, token, toast],
   );
 
   return (
@@ -86,10 +93,16 @@ const App = (): JSX.Element => {
       >
         <Route index element={<Navigate to="/courses" replace />} />
         <Route path="login" element={<LoginPage onLogin={auth.login} />} />
-        <Route path="courses" element={<CoursesPage token={auth.token} />} />
-        <Route path="courses/:id" element={<CourseDetailsPage token={auth.token} />} />
-        <Route path="sessions" element={<SessionsPage token={auth.token} />} />
+        <Route path="register" element={<RegisterPage onRegister={auth.login} />} />
+        <Route path="courses" element={<CoursesPage token={auth.token} role={role} />} />
+        <Route path="courses/new" element={<CourseFormPage token={auth.token} />} />
+        <Route path="courses/:id" element={<CourseDetailsPage token={auth.token} role={role} />} />
+        <Route path="courses/:id/edit" element={<CourseFormPage token={auth.token} />} />
+        <Route path="sessions" element={<SessionsPage token={auth.token} role={role} />} />
+        <Route path="sessions/new" element={<SessionFormPage token={auth.token} />} />
         <Route path="my-bookings" element={<MyBookingsPage token={auth.token} />} />
+        <Route path="profile" element={<ProfilePage token={auth.token} />} />
+        {role === "admin" ? <Route path="users" element={<UsersPage token={auth.token} />} /> : null}
         <Route path="admin" element={<AdminPage token={auth.token} role={role} onResetDone={clearAuth} />} />
         {canAccessInternalBugs ? <Route path="bugs" element={<BugsPage token={auth.token} />} /> : null}
       </Route>

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { useToast } from "../components/ToastProvider";
 import { isUiBugModeEnabled } from "../lib/bugs";
@@ -47,13 +47,14 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
   };
 
   return (
-    <section className="panel">
+    <section className="panel" data-testid="page-login">
       <h1>Login</h1>
-      <form className="form" onSubmit={onSubmit}>
+      <form className="form" data-testid="form-login" onSubmit={onSubmit}>
         <label>
           Email
           <input
             type="email"
+            data-testid="input-email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             required
@@ -63,18 +64,27 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
           Password
           <input
             type="password"
+            data-testid="input-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             required
           />
         </label>
-        <button type="submit" disabled={loginMutation.isPending}>
+        <button type="submit" data-testid="btn-login" disabled={loginMutation.isPending}>
           {loginMutation.isPending ? "Signing in..." : "Sign in"}
         </button>
       </form>
       {loginMutation.error ? (
-        <p className="error">{(loginMutation.error as ApiError).message}</p>
+        <p className="error" data-testid="login-error">
+          {(loginMutation.error as ApiError).message}
+        </p>
       ) : null}
+      <p>
+        Don't have an account?{" "}
+        <Link to="/register" data-testid="link-register">
+          Register
+        </Link>
+      </p>
     </section>
   );
 };

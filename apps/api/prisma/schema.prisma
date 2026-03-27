@@ -18,38 +18,56 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   passwordHash  String
   role          UserRole
+  name          String?
+  avatarUrl     String?
+  bio           String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   mentorSession Session[] @relation("MentorSessions")
   bookings      Booking[]
+  reviews       Review[]
+  uploads       Upload[]
 }
 
 model Course {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  sessions    Session[]
+  id            String      @id @default(cuid())
+  title         String
+  description   String?
+  imageUrl      String?
+  level         CourseLevel  @default(BEGINNER)
+  durationHours Int?
+  isPublished   Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sessions      Session[]
+  reviews       Review[]
 }
 
 model Session {
-  id        String    @id @default(cuid())
-  courseId  String
-  mentorId  String
-  startsAt  DateTime
-  endsAt    DateTime
-  capacity  Int
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  course    Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  mentor    User      @relation("MentorSessions", fields: [mentorId], references: [id], onDelete: Restrict)
-  bookings  Booking[]
+  id          String    @id @default(cuid())
+  courseId     String
+  mentorId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  location    String?
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  mentor      User      @relation("MentorSessions", fields: [mentorId], references: [id], onDelete: Restrict)
+  bookings    Booking[]
 
   @@index([courseId])
   @@index([mentorId])
@@ -67,4 +85,32 @@ model Booking {
 
   @@unique([sessionId, userId])
   @@index([userId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  courseId   String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, userId])
+  @@index([courseId])
+}
+
+model Upload {
+  id           String   @id @default(cuid())
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  uploadedById String
+  createdAt    DateTime @default(now())
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([uploadedById])
 }

@@ -59,3 +59,43 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
 
   return (await response.json()) as T;
 };
+
+export const apiUpload = async <T>(path: string, file: File, token: string | null): Promise<T> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    const errorPayload = payload as
+      | {
+          error?: {
+            code?: string;
+            message?: string;
+          };
+        }
+      | undefined;
+
+    const message =
+      response.status === 500 && isUiBugModeEnabled()
+        ? "Invalid email or password"
+        : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
+    const code = errorPayload?.error?.code;
+    throw new ApiError(message, response.status, code);
+  }
+
+  return (await response.json()) as T;
+};
