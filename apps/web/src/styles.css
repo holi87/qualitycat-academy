@@ -1,8 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════
-   QualityCat Academy — "Obsidian & Citrus" Dark Theme
+   QualityCat Academy — "Obsidian & Citrus" with Light / Dark modes
    ═══════════════════════════════════════════════════════════════════ */
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg: #09090b;
   --bg-soft: #0f0f12;
   --surface: #151518;
@@ -14,6 +15,7 @@
   --accent-dim: #a8cc00;
   --accent-soft: rgba(212, 255, 0, 0.12);
   --accent-glow: rgba(212, 255, 0, 0.25);
+  --on-accent: #09090b;
   --danger: #ff4060;
   --danger-soft: rgba(255, 64, 96, 0.14);
   --success: #34d399;
@@ -26,11 +28,42 @@
   --line-strong: rgba(255, 255, 255, 0.14);
   --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.4);
+  --header-bg: rgba(9, 9, 11, 0.85);
+  --mesh-color: rgba(212, 255, 0, 0.3);
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-pill: 999px;
   --transition: 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-theme="light"] {
+  --bg: #f5f4f0;
+  --bg-soft: #eceae4;
+  --surface: #ffffff;
+  --surface-up: #f9f8f5;
+  --ink: #1a1a18;
+  --ink-soft: #3a3a38;
+  --muted: #6e6e6a;
+  --accent: #3d6b00;
+  --accent-dim: #2e5200;
+  --accent-soft: rgba(61, 107, 0, 0.09);
+  --accent-glow: rgba(61, 107, 0, 0.18);
+  --on-accent: #ffffff;
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.09);
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.09);
+  --warning: #a16207;
+  --warning-soft: rgba(161, 98, 7, 0.09);
+  --info: #2563eb;
+  --info-soft: rgba(37, 99, 235, 0.09);
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --shadow-lg: 0 24px 48px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.07);
+  --header-bg: rgba(245, 244, 240, 0.88);
+  --mesh-color: rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -73,7 +106,7 @@ p {
 
 ::selection {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
 }
 
 /* ─── Layout ──────────────────────────────────────────────────── */
@@ -93,8 +126,8 @@ p {
   z-index: -1;
   opacity: 0.035;
   background-image:
-    linear-gradient(rgba(212, 255, 0, 0.3) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212, 255, 0, 0.3) 1px, transparent 1px);
+    linear-gradient(var(--mesh-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--mesh-color) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -104,7 +137,7 @@ p {
   z-index: 20;
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(20px) saturate(1.2);
-  background: rgba(9, 9, 11, 0.85);
+  background: var(--header-bg);
 }
 
 .layout__header-inner {
@@ -171,7 +204,7 @@ p {
 }
 
 .nav-link--active {
-  color: var(--bg) !important;
+  color: var(--on-accent) !important;
   border-color: transparent;
   background: var(--accent);
   font-weight: 700;
@@ -180,7 +213,7 @@ p {
 
 .nav-link--active:hover {
   background: var(--accent);
-  color: var(--bg) !important;
+  color: var(--on-accent) !important;
   box-shadow: 0 0 28px var(--accent-glow);
 }
 
@@ -311,7 +344,7 @@ p {
   border: none;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   font: inherit;
   font-weight: 700;
   padding: 0.62rem 1.1rem;
@@ -391,7 +424,7 @@ p {
   border: none;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   font: inherit;
   font-weight: 700;
   padding: 0.52rem 0.95rem;
@@ -418,7 +451,7 @@ p {
   border: none;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   font: inherit;
   font-weight: 700;
   padding: 0.52rem 1rem;
@@ -431,7 +464,7 @@ p {
 .button:hover {
   transform: translateY(-1px);
   box-shadow: 0 0 32px var(--accent-glow);
-  color: var(--bg);
+  color: var(--on-accent);
 }
 
 .button--danger {
@@ -639,7 +672,7 @@ p {
   border: none;
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   font: inherit;
   font-weight: 700;
   padding: 0.58rem 1rem;
@@ -891,7 +924,7 @@ p {
 
 .confirm-dialog__button--confirm {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   border-color: transparent;
   box-shadow: 0 0 16px var(--accent-glow);
 }
@@ -1003,7 +1036,7 @@ p {
 
 .pagination__button--active {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   border-color: transparent;
   font-weight: 700;
   box-shadow: 0 0 12px var(--accent-glow);
@@ -1279,14 +1312,14 @@ p {
 
 .stepper__step--active .stepper__number {
   background: var(--accent);
-  color: var(--bg);
+  color: var(--on-accent);
   border-color: var(--accent);
   box-shadow: 0 0 12px var(--accent-glow);
 }
 
 .stepper__step--completed .stepper__number {
   background: var(--success);
-  color: var(--bg);
+  color: var(--on-accent);
   border-color: var(--success);
 }
 
@@ -1383,6 +1416,59 @@ p {
   gap: 0.6rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* ─── Theme toggle ────────────────────────────────────────────── */
+
+.theme-toggle {
+  position: relative;
+  width: 3rem;
+  height: 1.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-soft);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-dim);
+}
+
+.theme-toggle__track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.theme-toggle__icon {
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.theme-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: transform var(--transition);
+}
+
+[data-theme="light"] .theme-toggle__thumb {
+  transform: translateX(1.35rem);
 }
 
 /* ─── Responsive ──────────────────────────────────────────────── */

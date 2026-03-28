@@ -1,6 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { UserRole } from "../lib/types";
+
+type Theme = "dark" | "light";
+
+const getInitialTheme = (): Theme => {
+  const stored = localStorage.getItem("theme");
+  if (stored === "light" || stored === "dark") return stored;
+  return "dark";
+};
 
 type LayoutProps = {
   isAuthenticated: boolean;
@@ -11,6 +19,14 @@ type LayoutProps = {
 
 const Layout = ({ isAuthenticated, role, showBugsLink, onLogout }: LayoutProps): JSX.Element => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  const toggleTheme = (): void => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   const resolveNavClass = ({ isActive }: { isActive: boolean }): string =>
     `nav-link${isActive ? " nav-link--active" : ""}`;
@@ -24,6 +40,19 @@ const Layout = ({ isAuthenticated, role, showBugsLink, onLogout }: LayoutProps):
             <span className="brand__name">qualitycat academy</span>
             <span className="brand__tag">training and mentoring</span>
           </Link>
+          <button
+            className="theme-toggle"
+            type="button"
+            data-testid="btn-theme-toggle"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            onClick={toggleTheme}
+          >
+            <span className="theme-toggle__track">
+              <span className="theme-toggle__icon" aria-hidden="true">&#9789;</span>
+              <span className="theme-toggle__icon" aria-hidden="true">&#9788;</span>
+            </span>
+            <span className="theme-toggle__thumb" />
+          </button>
           <button
             className="nav-hamburger"
             type="button"
