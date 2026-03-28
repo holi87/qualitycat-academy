@@ -40,6 +40,10 @@ docker compose -f infra/docker/compose.yml up -d --build
 
 No linter or test runner is configured (by design — this is a platform for learning test automation).
 
+## Workflow
+
+After every set of changes, create a git commit and push to remote.
+
 ## Architecture
 
 Two independent apps (no monorepo tooling, separate `package.json` files), orchestrated via Docker Compose.
