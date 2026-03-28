@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { UserRole } from "../lib/types";
+import CookieBanner from "./CookieBanner";
 
 type Theme = "dark" | "light";
+type Consent = "accepted" | "rejected" | null;
 
-const getInitialTheme = (): Theme => {
-  const stored = localStorage.getItem("theme");
-  if (stored === "light" || stored === "dark") return stored;
+const getStoredConsent = (): Consent => {
+  const v = localStorage.getItem("cookie-consent");
+  if (v === "accepted" || v === "rejected") return v;
+  return null;
+};
+
+const getInitialTheme = (consent: Consent): Theme => {
+  if (consent === "accepted") {
+    const stored = localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") return stored;
+  }
   return "dark";
 };
 
@@ -19,12 +29,27 @@ type LayoutProps = {
 
 const Layout = ({ isAuthenticated, role, showBugsLink, onLogout }: LayoutProps): JSX.Element => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [consent, setConsent] = useState<Consent>(getStoredConsent);
+  const [theme, setTheme] = useState<Theme>(() => getInitialTheme(consent));
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    if (consent === "accepted") {
+      localStorage.setItem("theme", theme);
+    }
+  }, [theme, consent]);
+
+  const handleAccept = (): void => {
+    localStorage.setItem("cookie-consent", "accepted");
     localStorage.setItem("theme", theme);
-  }, [theme]);
+    setConsent("accepted");
+  };
+
+  const handleReject = (): void => {
+    localStorage.setItem("cookie-consent", "rejected");
+    localStorage.removeItem("theme");
+    setConsent("rejected");
+  };
 
   const toggleTheme = (): void => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
@@ -129,6 +154,9 @@ const Layout = ({ isAuthenticated, role, showBugsLink, onLogout }: LayoutProps):
       <main className="layout__main">
         <Outlet />
       </main>
+      {consent === null ? (
+        <CookieBanner onAccept={handleAccept} onReject={handleReject} />
+      ) : null}
     </div>
   );
 };
