@@ -826,11 +826,9 @@ p {
 
 /* ─── Modal ───────────────────────────────────────────────────── */
 
-.modal__overlay {
+.modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -838,7 +836,15 @@ p {
   animation: modal-fade-in 0.2s ease;
 }
 
+.modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+}
+
 .modal__content {
+  position: relative;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line-strong);
   background: var(--surface);
