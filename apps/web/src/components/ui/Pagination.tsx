@@ -1,3 +1,5 @@
+import { isFeBugEnabled } from "../../lib/bugs";
+
 interface PaginationProps {
   page: number;
   totalPages: number;
@@ -58,7 +60,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       </div>
 
       <span className="pagination__info" data-testid="pagination-info">
-        Page {page} of {totalPages}
+        Page {isFeBugEnabled("FE_BUG_PAGINATION_OFF_BY_ONE") ? page + 1 : page} of {totalPages}
       </span>
 
       <button

@@ -3,6 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useToast } from "../components/ToastProvider";
+import { isFeBugEnabled } from "../lib/bugs";
 import { apiRequest, ApiError } from "../lib/http";
 
 type RegisterPageProps = {
@@ -31,7 +32,7 @@ const RegisterPage = ({ onRegister }: RegisterPageProps): JSX.Element => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const validate = (): boolean => {
+  const computeErrors = (): FieldErrors => {
     const errors: FieldErrors = {};
 
     if (email.trim() === "") {
@@ -48,9 +49,19 @@ const RegisterPage = ({ onRegister }: RegisterPageProps): JSX.Element => {
       errors.confirmPassword = "Passwords do not match.";
     }
 
+    return errors;
+  };
+
+  const validate = (): boolean => {
+    const errors = computeErrors();
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  const hasValidationErrors = Object.keys(computeErrors()).length > 0;
+  const skipValidationDisable = isFeBugEnabled("FE_BUG_FORM_NO_VALIDATION");
+  const submitDisabled =
+    registerMutation.isPending || (!skipValidationDisable && hasValidationErrors);
 
   const registerMutation = useMutation({
     mutationFn: (payload: { name?: string; email: string; password: string }) =>
@@ -149,7 +160,7 @@ const RegisterPage = ({ onRegister }: RegisterPageProps): JSX.Element => {
           </p>
         ) : null}
 
-        <button type="submit" data-testid="btn-register" disabled={registerMutation.isPending}>
+        <button type="submit" data-testid="btn-register" disabled={submitDisabled}>
           {registerMutation.isPending ? "Creating account..." : "Register"}
         </button>
       </form>

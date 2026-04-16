@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { isFeBugEnabled } from "../../lib/bugs";
 
 interface ModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export function Modal({ isOpen, onClose, title, children, testId }: ModalProps) 
   );
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isFeBugEnabled("FE_BUG_MODAL_NO_CLOSE_ON_ESC")) {
       document.addEventListener("keydown", handleKeyDown);
       return () => document.removeEventListener("keydown", handleKeyDown);
     }
