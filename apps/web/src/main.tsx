@@ -5,14 +5,15 @@ import { BrowserRouter } from "react-router-dom";
 
 import App from "./App";
 import ToastProvider from "./components/ToastProvider";
-import { isUiBugModeEnabled } from "./lib/bugs";
 import "./styles.css";
 
+// Default options are managed at runtime in App.tsx based on the
+// FE_BUG_STALE_CACHE flag, so initial settings are intentionally simple.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: isUiBugModeEnabled() ? Number.POSITIVE_INFINITY : 0,
-      refetchOnWindowFocus: !isUiBugModeEnabled(),
+      staleTime: 0,
+      refetchOnWindowFocus: true,
     },
   },
 });

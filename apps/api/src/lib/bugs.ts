@@ -159,10 +159,6 @@ export const getRuntimeBugSnapshot = (): RuntimeBugSnapshot => {
   };
 };
 
-export const getBugFlagsSnapshot = (): RuntimeBugSnapshot => getRuntimeBugSnapshot();
-
-export const isFrontendBugEnabled = (): boolean => runtimeState.frontendBugs;
-
 export const isBugEnabled = (flag?: string): boolean => {
   if (!runtimeState.backendBugs) {
     return false;

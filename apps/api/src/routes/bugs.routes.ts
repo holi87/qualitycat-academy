@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { sendError } from "../lib/errors.js";
-import { getBugFlagsSnapshot, getRuntimeBugSnapshot } from "../lib/bugs.js";
+import { getRuntimeBugSnapshot } from "../lib/bugs.js";
 import { isAdminOrMentor } from "../types/shared.js";
 
 const bugsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
@@ -14,7 +14,7 @@ const bugsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       },
     },
     async () => {
-      return getBugFlagsSnapshot();
+      return getRuntimeBugSnapshot();
     },
   );
 
