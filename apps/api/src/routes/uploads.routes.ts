@@ -5,6 +5,7 @@ import { isBugEnabled } from "../lib/bugs.js";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
+import { Transform } from "node:stream";
 import crypto from "node:crypto";
 
 type UploadsRoutesOptions = {
@@ -59,18 +60,33 @@ const uploadsRoutes: FastifyPluginAsync<UploadsRoutesOptions> = async (app: Fast
       const storagePath = path.join(UPLOAD_DIR, storedName);
 
       let sizeBytes = 0;
-      const chunks: Buffer[] = [];
+      let tooLarge = false;
+      const sizeLimiter = new Transform({
+        transform(chunk, _encoding, callback) {
+          sizeBytes += chunk.length;
+          if (sizeBytes > MAX_FILE_SIZE) {
+            tooLarge = true;
+            callback(new Error("FILE_TOO_LARGE"));
+            return;
+          }
+          callback(null, chunk);
+        },
+      });
 
-      for await (const chunk of data.file) {
-        sizeBytes += chunk.length;
-        if (sizeBytes > MAX_FILE_SIZE) {
-          // Clean up partially written data
-          return sendError(reply, 400, "FILE_TOO_LARGE", `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      try {
+        await pipeline(data.file, sizeLimiter, fs.createWriteStream(storagePath));
+      } catch (error) {
+        await fs.promises.unlink(storagePath).catch(() => undefined);
+        if (tooLarge) {
+          return sendError(
+            reply,
+            400,
+            "FILE_TOO_LARGE",
+            `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+          );
         }
-        chunks.push(chunk);
+        throw error;
       }
-
-      await fs.promises.writeFile(storagePath, Buffer.concat(chunks));
 
       const upload = await prisma.upload.create({
         data: {
