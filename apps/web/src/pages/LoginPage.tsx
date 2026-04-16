@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 
 import { useToast } from "../components/ToastProvider";
-import { isUiBugModeEnabled } from "../lib/bugs";
+import { isFeBugEnabled } from "../lib/bugs";
 import { apiRequest, ApiError } from "../lib/http";
 
 type LoginPageProps = {
@@ -41,7 +41,7 @@ const LoginPage = ({ onLogin }: LoginPageProps): JSX.Element => {
     const payload = { email, password };
     loginMutation.mutate(payload);
 
-    if (isUiBugModeEnabled()) {
+    if (isFeBugEnabled("FE_BUG_DOUBLE_SUBMIT")) {
       loginMutation.mutate(payload);
     }
   };

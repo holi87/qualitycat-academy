@@ -9,7 +9,7 @@ import { ConfirmDialog } from "../components/ui/ConfirmDialog";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Spinner } from "../components/ui/Spinner";
 import { Tabs } from "../components/ui/Tabs";
-import { isUiBugModeEnabled } from "../lib/bugs";
+import { isFeBugEnabled } from "../lib/bugs";
 import { formatDateTime } from "../lib/datetime";
 import { apiRequest, ApiError } from "../lib/http";
 import { CourseDetailsResponse, ReviewsResponse, UserRole } from "../lib/types";
@@ -136,7 +136,7 @@ const CourseDetailsPage = ({ token, role }: CourseDetailsPageProps): JSX.Element
 
   const submitReserve = (sessionId: string): void => {
     reserveMutation.mutate(sessionId);
-    if (isUiBugModeEnabled()) {
+    if (isFeBugEnabled("FE_BUG_DOUBLE_SUBMIT")) {
       reserveMutation.mutate(sessionId);
     }
   };
@@ -202,7 +202,14 @@ const CourseDetailsPage = ({ token, role }: CourseDetailsPageProps): JSX.Element
           <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
             {activeTab === "info" ? (
               <div data-testid="tab-content-info">
-                <p>{course.description ?? "No description."}</p>
+                {isFeBugEnabled("FE_BUG_XSS_COURSE_DESC") && course.description ? (
+                  <p
+                    data-testid="course-description"
+                    dangerouslySetInnerHTML={{ __html: course.description }}
+                  />
+                ) : (
+                  <p data-testid="course-description">{course.description ?? "No description."}</p>
+                )}
                 <div className="course-details__meta">
                   <Badge variant={levelBadgeVariant(course.level)} testId="course-level">
                     {course.level}

@@ -8,7 +8,7 @@ import { DataTable } from "../components/ui/DataTable";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Pagination } from "../components/ui/Pagination";
 import { Spinner } from "../components/ui/Spinner";
-import { isUiBugModeEnabled } from "../lib/bugs";
+import { isFeBugEnabled } from "../lib/bugs";
 import { formatDateTime } from "../lib/datetime";
 import { apiRequest, ApiError } from "../lib/http";
 import { SessionListItem, SessionsResponse, UserRole } from "../lib/types";
@@ -110,7 +110,7 @@ const SessionsPage = ({ token, role }: SessionsPageProps): JSX.Element => {
 
   const submitBooking = (sessionId: string): void => {
     bookingMutation.mutate(sessionId);
-    if (isUiBugModeEnabled()) {
+    if (isFeBugEnabled("FE_BUG_DOUBLE_SUBMIT")) {
       bookingMutation.mutate(sessionId);
     }
   };

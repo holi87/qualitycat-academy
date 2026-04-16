@@ -10,7 +10,7 @@ export class ApiError extends Error {
   }
 }
 
-import { isUiBugModeEnabled } from "./bugs";
+import { isFeBugEnabled } from "./bugs";
 
 type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -39,7 +39,7 @@ const throwResponseError = async (response: Response): Promise<never> => {
     | undefined;
 
   const message =
-    response.status === 500 && isUiBugModeEnabled()
+    response.status === 500 && isFeBugEnabled("FE_BUG_WRONG_ERROR_MSG")
       ? "Invalid email or password"
       : (errorPayload?.error?.message ?? `Request failed with status ${response.status}`);
   const code = errorPayload?.error?.code;

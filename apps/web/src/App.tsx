@@ -5,7 +5,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { useToast } from "./components/ToastProvider";
 import { authStorage, getUserRoleFromToken } from "./lib/auth";
-import { applyPublicBugState, useRuntimeBugState } from "./lib/bugs";
+import { applyPublicBugState, isFeBugEnabled, useRuntimeBugState } from "./lib/bugs";
 import { apiRequest } from "./lib/http";
 import { PublicBugsStateResponse } from "./lib/types";
 import AdminPage from "./pages/AdminPage";
@@ -47,13 +47,14 @@ const App = (): JSX.Element => {
   }, [bugStateQuery.data]);
 
   useEffect(() => {
+    const staleCacheBug = isFeBugEnabled("FE_BUG_STALE_CACHE");
     queryClient.setDefaultOptions({
       queries: {
-        staleTime: runtimeBugs.frontendBugs ? Number.POSITIVE_INFINITY : 0,
-        refetchOnWindowFocus: !runtimeBugs.frontendBugs,
+        staleTime: staleCacheBug ? Number.POSITIVE_INFINITY : 0,
+        refetchOnWindowFocus: !staleCacheBug,
       },
     });
-  }, [queryClient, runtimeBugs.frontendBugs]);
+  }, [queryClient, runtimeBugs.frontendBugs, runtimeBugs.frontendFlags]);
 
   const clearAuth = useCallback((): void => {
     authStorage.clearToken();
