@@ -58,11 +58,6 @@ const RegisterPage = ({ onRegister }: RegisterPageProps): JSX.Element => {
     return Object.keys(errors).length === 0;
   };
 
-  const hasValidationErrors = Object.keys(computeErrors()).length > 0;
-  const skipValidationDisable = isFeBugEnabled("FE_BUG_FORM_NO_VALIDATION");
-  const submitDisabled =
-    registerMutation.isPending || (!skipValidationDisable && hasValidationErrors);
-
   const registerMutation = useMutation({
     mutationFn: (payload: { name?: string; email: string; password: string }) =>
       apiRequest<RegisterResponse>("/auth/register", {
@@ -78,6 +73,11 @@ const RegisterPage = ({ onRegister }: RegisterPageProps): JSX.Element => {
       toast.error((error as ApiError).message);
     },
   });
+
+  const hasValidationErrors = Object.keys(computeErrors()).length > 0;
+  const skipValidationDisable = isFeBugEnabled("FE_BUG_FORM_NO_VALIDATION");
+  const submitDisabled =
+    registerMutation.isPending || (!skipValidationDisable && hasValidationErrors);
 
   const onSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
